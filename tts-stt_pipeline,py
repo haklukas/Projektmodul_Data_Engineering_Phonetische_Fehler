@@ -1,0 +1,229 @@
+from pathlib import Path
+from xml.parsers.expat import model
+from openai import OpenAI, audio
+import whisper
+import torch
+import soundfile as sf
+import numpy as np
+from qwen_tts import Qwen3TTSModel
+from audiolib import modify_audio, add_interruptions, audioread
+from noisyspeech_synthesizer_adapted import *
+import Levenshtein
+
+
+SKIP_TTS = False
+SKIP_STT = False
+ALL_LANGUAGES = False
+ALL_SPEAK = False
+TEST_CASE  = True
+VOICE_CLONE_TEST = False
+ONLY_TEST = True
+SYNTHESIZE_NOISE = True
+
+LAYERS_NOISE = 2
+#VOLUMES = [0.5, 1.0, 2.0]
+VOLUMES = [1.0]
+#SPEEDS = [0.5, 1.0, 1.5]
+SPEEDS = [1.0]
+NUM_INTERRUPTS = 3
+LEN_INTERRUPTS = 0.2
+
+def tts(text, language="all", speaker="all", instruct=""):
+
+    model = Qwen3TTSModel.from_pretrained(
+    "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+    device_map="cpu",
+    dtype=torch.bfloat16,
+    )
+
+    if language == "all":
+        language = model.get_supported_languages()
+    if speaker == "all":
+        speaker = model.get_supported_speakers()
+
+    if isinstance(language, str):
+        language=[language]
+    if isinstance(speaker, str):
+        speaker=[speaker]
+    if isinstance(instruct, str):
+        instruct=[instruct]
+
+    step = 0
+    if isinstance(language, list) and isinstance(speaker, list):
+            wavs = []
+            for lang in language:
+                for spk in speaker:
+                    for instr in instruct:
+                        step += 1
+                        if isinstance(text, str) or len(text)==1:
+                            print(f"Generating audio {step} of {len(language)*len(speaker)*len(instruct)}.")
+                        else:
+                            print(f"Generating audios {step*len(text)-len(text)+1} to {step*len(text)} of {len(text)*len(language)*len(speaker)*len(instruct)}.")
+                        wav, sr = model.generate_custom_voice(
+                            text=text,
+                            language=lang,
+                            speaker=spk,
+                            instruct=instr
+                        )
+                        wavs.extend(wav)
+
+    return wavs, sr
+
+
+def stt(audios, language=None):
+
+    model = whisper.load_model("turbo", device="cpu")
+    texts = []
+    if isinstance(audios, str):
+        audios = [audios]
+    for audio in audios:
+        if isinstance(audio, np.ndarray):
+            audio = audio.astype(np.float32)
+        if language is not None:
+            result = model.transcribe(audio, language=language)
+        else:
+            result = model.transcribe(audio)
+        texts.append(result["text"])
+    return texts
+
+def test_case(test_text, test_language, test_speaker, test_instruct, test_sr, test_snr_lower, test_snr_upper, test_total_snrlevels, test_clean_folder="test_clean", test_noisy_folder="Test_NoisySpeech_After", test_clean_proc_folder="Test_CleanSpeech_After", test_noise_proc_folder="Test_Noise_After"):
+    
+    if VOICE_CLONE_TEST:
+        ref_audio, orig_sr = audioread("testsatz_dialekt.wav")
+        #ref_text = "Jo mei, des is scho nen Testsatz."
+        ref_text = "Ja mei, das ist schon ein Testsatz."
+        model = Qwen3TTSModel.from_pretrained(
+            "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            device_map="cpu",
+            dtype=torch.bfloat16,
+        )
+        wavs, sr = model.generate_voice_clone(
+            text=["Und wenn i des so red, dann hört ma des scho, dass i aus Bayern komm.",
+                  "Und wenn ich das so rede, dann hört man das schon, dass ich aus Bayern komme."],
+            language="german",
+            ref_audio=(ref_audio, orig_sr),
+            ref_text=ref_text,
+            instruct="speak with a strong bavarian accent and always replace 'ich' with 'i' and 'das' with 'des' and 'schon' with 'scho' and 'komme' with 'komm'",
+        )
+        sf.write("voice_clone_test_replace.wav", wavs[0], sr)
+        sf.write("voice_clone_test2_replace.wav", wavs[1], sr)
+
+
+    test_audio, orig_sr = tts(text=test_text, language=test_language, speaker=test_speaker, instruct=test_instruct)
+    if os.path.exists(test_clean_folder):
+        shutil.rmtree(test_clean_folder)
+    os.makedirs(test_clean_folder)
+    for vol in VOLUMES:
+        for spd in SPEEDS:
+            modified_audio = modify_audio(test_audio[0], volume_factor=vol, speed_factor=spd)
+            sf.write(os.path.join(test_clean_folder, f"test_audio_{vol}vol_{spd}spd.wav"), modified_audio, samplerate=orig_sr)
+            if NUM_INTERRUPTS > 0:
+                modified_audio_interrupted = add_interruptions(modified_audio, orig_sr, interruption_length=LEN_INTERRUPTS, num_interruptions=NUM_INTERRUPTS)
+                sf.write(os.path.join(test_clean_folder, f"test_audio_{vol}vol_{spd}spd_{NUM_INTERRUPTS}interrupts.wav"), modified_audio_interrupted, samplerate=orig_sr)
+
+
+    test_text_res = stt(test_audio, test_language)
+    print(test_text_res)
+
+    for i in range(LAYERS_NOISE):
+        if i == 0:
+            synthesize_noisy_speech(sampling_rate=test_sr, snr_lower=test_snr_lower, snr_upper=test_snr_upper, total_snrlevels=test_total_snrlevels, clean_dir=test_clean_folder, noisyspeech_dir=test_noisy_folder, clean_proc_dir=test_clean_proc_folder, noise_proc_dir=test_noise_proc_folder)
+        elif i == 1:
+            synthesize_noisy_speech(sampling_rate=test_sr, snr_lower=test_snr_lower, snr_upper=test_snr_upper, total_snrlevels=test_total_snrlevels, clean_dir=test_noisy_folder, noisyspeech_dir=test_noisy_folder + f"_{i}", clean_proc_dir=test_clean_proc_folder + f"_{i}", noise_proc_dir=test_noise_proc_folder + f"_{i}")
+        else:
+            synthesize_noisy_speech(sampling_rate=test_sr, snr_lower=test_snr_lower, snr_upper=test_snr_upper, total_snrlevels=test_total_snrlevels, clean_dir=test_noisy_folder + f"_{i-1}", noisyspeech_dir=test_noisy_folder + f"_{i}", clean_proc_dir=test_clean_proc_folder + f"_{i}", noise_proc_dir=test_noise_proc_folder + f"_{i}")
+    
+
+    noisy_filenames = glob.glob(os.path.join(test_noisy_folder + "*", '*.wav'))
+    print(f"Testing STT on {len(noisy_filenames)} noisy audio files...")
+    print(f"Original text: {test_text}")
+    for noisy_file in noisy_filenames:
+        noisy_test_text = stt(noisy_file, test_language)
+        if noisy_test_text [0][0] == " ":
+            noisy_test_text[0] = noisy_test_text[0][1:]
+        print(f"Transcription for {noisy_file}: {noisy_test_text[0]}")
+        print(f"Levenshtein distance to original: {Levenshtein.distance(test_text, noisy_test_text[0])}, ratio: {Levenshtein.ratio(test_text, noisy_test_text[0])}")
+        print(f"Required Edits: {Levenshtein.editops(noisy_test_text[0], test_text)}")
+        print("--------------------------------------------------")
+
+if __name__ == "__main__":
+
+    if TEST_CASE:
+        test_text = "Maria Sklodowska-Curie und Mikolaj Kopernik sind berühmte polnische Wissenschaftler."
+        test_language = "german"
+        test_speaker = "Ryan"
+        test_instruct = ""
+        test_sr = 16000
+        test_snr_lower = 10.0
+        test_snr_upper = 20.0
+        test_total_snrlevels = 2
+
+        test_case(test_text, test_language, test_speaker, test_instruct, test_sr, test_snr_lower, test_snr_upper, test_total_snrlevels)
+        
+
+
+    if not ONLY_TEST:
+        original_texts=[
+            #"Xi Jinping is the president of China.",
+            "Maria Sklodowska-Curie und Mikolaj Kopernik sind berühmte polnische Wissenschaftler.",
+            #"L'arc de Triomphe est un monument célèbre à Paris.",
+            #"Shigeru Miyamoto ist ein berühmter Entwickler bei Nintendo."
+        ]
+
+        text_language = "german"
+
+        if ALL_LANGUAGES:
+            languages = "all"
+        else:
+            languages = [
+                'chinese',
+                'english',
+                #'french',
+                'german',
+                #'japanese'
+                ]
+        if ALL_SPEAK:       
+            speakers = "all"
+        else:       
+            speakers = ['vivian']
+        instructs=[
+            "speak slurred and erratic as if drunk, unintelligible and without clear words and with heavy german accent",
+            #"speak breathlessly in an extremely high-pitched and squeaky voice"
+        ]
+
+        if not ALL_LANGUAGES and not ALL_SPEAK:
+            versions_per_text = len(languages)*len(speakers)*len(instructs)
+        sr = 16000
+        
+        audios, orig_sr = tts(text=original_texts, language=languages, speaker=speakers, instruct=instructs)
+        if not SKIP_STT:
+            texts = stt(audios, language=text_language)
+            print(texts)
+
+        if len(VOLUMES) > 1 or len(SPEEDS) > 1 or NUM_INTERRUPTS > 0:
+            versions_per_text = versions_per_text * len(VOLUMES) * len(SPEEDS) * (2 if NUM_INTERRUPTS > 0 else 1)
+            modified_audios = []
+            for audio in audios:
+                modified_audios.append(modify_audio(audio, volume_factor=VOLUMES[0], speed_factor=SPEEDS[0]))
+                if NUM_INTERRUPTS > 0:
+                    modified_audios.append(add_interruptions(modified_audios[-1], orig_sr, interruption_length=LEN_INTERRUPTS, num_interruptions=NUM_INTERRUPTS))
+            audios = modified_audios
+            print(f"Number of modified audio versions: {len(modified_audios)}, versions per text: {versions_per_text}")
+
+        if SYNTHESIZE_NOISE:
+
+            snr_lower = 10.0
+            snr_upper = 20.0
+            total_snrlevels = 2
+            versions_per_text = versions_per_text * total_snrlevels
+
+            noisy_speech, clean_speech, noise = synthesize_noisy_speech(audios = audios, orig_sr=orig_sr, snr_lower=snr_lower, snr_upper=snr_upper, total_snrlevels=total_snrlevels, write_processed_files = True, sampling_rate=sr)
+            noisy_texts = stt(noisy_speech, language=text_language)
+            for i in range(len(noisy_texts)):
+                print(f"Transcription for Noisy version {i+1}: {noisy_texts[i]}")
+                print(f"Original text: {original_texts[i//versions_per_text]}")
+                print(f"Levenshtein distance to original: {Levenshtein.distance(original_texts[i//versions_per_text], noisy_texts[i])}, ratio: {Levenshtein.ratio(original_texts[i//versions_per_text], noisy_texts[i])}")
+                print(f"Required Edits: {Levenshtein.editops(original_texts[i//versions_per_text], noisy_texts[i])}")
+                print("--------------------------------------------------")
+        
+

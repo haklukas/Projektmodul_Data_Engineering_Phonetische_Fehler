@@ -427,3 +427,12 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+ffmpeg*
+MS-SNSD*
+[Nn]ois*/
+!noise/
+[Tt]est*/
+[Cc]lean*/
+[Nn]otiz*
+noisyspeech_synthesizer.py

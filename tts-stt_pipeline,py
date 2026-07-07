@@ -1,11 +1,14 @@
 from pathlib import Path
+import wave
 from xml.parsers.expat import model
 from openai import OpenAI, audio
+from piper import PiperVoice, SynthesisConfig
+import io
 import whisper
 import torch
 import soundfile as sf
 import numpy as np
-from qwen_tts import Qwen3TTSModel
+#from qwen_tts import Qwen3TTSModel
 from audiolib import modify_audio, add_interruptions, audioread
 from noisyspeech_synthesizer_adapted import *
 import Levenshtein
@@ -14,14 +17,14 @@ from textclass_params import Textclasses, PARAMS
 
 SKIP_TTS = False
 SKIP_STT = False
-ALL_LANGUAGES = False
-ALL_SPEAK = False
+#ALL_LANGUAGES = False
+#ALL_SPEAK = False
 TEST_CASE  = True
-VOICE_CLONE_TEST = False
+#VOICE_CLONE_TEST = False
 ONLY_TEST = True
 SYNTHESIZE_NOISE = True
 
-TO_MEMORY = True
+TO_MEMORY = False
 
 LAYERS_NOISE = 2
 #VOLUMES = [0.5, 1.0, 2.0]
@@ -32,7 +35,60 @@ NUM_INTERRUPTS = 3
 LEN_INTERRUPTS = 0.2
 
 
-def tts(text, language="all", speaker="all", instruct=""):
+def tts_piper(texts, voices):
+
+
+    wavs_data = []
+
+    for voice_pack, speaker_ids in voices:
+        voice = PiperVoice.load(voice_pack)
+
+        if speaker_ids is None or len(speaker_ids) == 0:
+            syn_config = SynthesisConfig(
+                volume=1,
+                length_scale=1,
+                noise_scale=1.0,
+                noise_w_scale=1.0,
+                normalize_audio=True,
+            )
+            for text in texts:
+
+                buffer = io.BytesIO()
+
+                with wave.open(buffer, "wb") as wav_file:
+                    voice.synthesize_wav(text[0], wav_file, syn_config=syn_config)
+
+                wav_bytes = buffer.getvalue()
+
+                wav, samplerate = sf.read(io.BytesIO(wav_bytes))
+                wavs_data.append((wav, text, (voice_pack, None)))
+
+        else:
+            for speaker_id in speaker_ids:
+                syn_config = SynthesisConfig(
+                    speaker_id=speaker_id,
+                    volume=1,
+                    length_scale=1,
+                    noise_scale=1.0,
+                    noise_w_scale=1.0,
+                    normalize_audio=True,
+                )
+                for text in texts:
+
+                    buffer = io.BytesIO()
+
+                    with wave.open(buffer, "wb") as wav_file:
+                        voice.synthesize_wav(text[0], wav_file, syn_config=syn_config)
+
+                    wav_bytes = buffer.getvalue()
+
+                    wav, samplerate = sf.read(io.BytesIO(wav_bytes))
+                    wav_data = (wav, text, (voice_pack, speaker_id))
+                    wavs_data.append(wav_data)
+
+    return wavs_data, samplerate
+
+"""def tts_qwen(text, language="all", speaker="all", instruct=""):
 
     model = Qwen3TTSModel.from_pretrained(
     "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
@@ -71,7 +127,7 @@ def tts(text, language="all", speaker="all", instruct=""):
                         )
                         wavs.extend(wav)
 
-    return wavs, sr
+    return wavs, sr"""
 
 
 def stt(audios, language=None):
@@ -90,7 +146,7 @@ def stt(audios, language=None):
         texts.append(result["text"])
     return texts
 
-def test_case(test_text, test_textclass, test_language, test_speaker, test_instruct, test_sr, test_clean_folder="test_clean", test_noisy_folder="Test_NoisySpeech_After", test_clean_proc_folder="Test_CleanSpeech_After", test_noise_proc_folder="Test_Noise_After"):
+"""def test_case(test_text, test_textclass, test_language, test_speaker, test_instruct, test_sr, test_clean_folder="test_clean", test_noisy_folder="Test_NoisySpeech_After", test_clean_proc_folder="Test_CleanSpeech_After", test_noise_proc_folder="Test_Noise_After"):
     
     if VOICE_CLONE_TEST:
         ref_audio, orig_sr = audioread("testsatz_dialekt.wav")
@@ -115,7 +171,7 @@ def test_case(test_text, test_textclass, test_language, test_speaker, test_instr
 
     params = PARAMS[test_textclass]
 
-    test_audio, orig_sr = tts(text=test_text, language=test_language, speaker=test_speaker, instruct=test_instruct)
+    test_audio, orig_sr = tts_qwen(text=test_text, language=test_language, speaker=test_speaker, instruct=test_instruct)
     if os.path.exists(test_clean_folder):
         shutil.rmtree(test_clean_folder)
     os.makedirs(test_clean_folder)
@@ -150,21 +206,65 @@ def test_case(test_text, test_textclass, test_language, test_speaker, test_instr
         print(f"Transcription for {noisy_file}: {noisy_test_text[0]}")
         print(f"Levenshtein distance to original: {Levenshtein.distance(test_text, noisy_test_text[0])}, ratio: {Levenshtein.ratio(test_text, noisy_test_text[0])}")
         print(f"Required Edits: {Levenshtein.editops(noisy_test_text[0], test_text)}")
+        print("--------------------------------------------------")"""
+
+def test_case_piper(test_texts, test_language, test_voices, test_sr, test_clean_folder="test_clean", test_noisy_folder="Test_NoisySpeech_After", test_clean_proc_folder="Test_CleanSpeech_After", test_noise_proc_folder="Test_Noise_After"):
+    
+    test_textclass = test_texts[0][1]
+    print(test_textclass)
+    params = PARAMS[test_textclass]
+
+    test_audio_data, orig_sr = tts_piper(texts=test_texts, voices=test_voices)
+    test_audio = [data[0] for data in test_audio_data]
+    if os.path.exists(test_clean_folder):
+        shutil.rmtree(test_clean_folder)
+    os.makedirs(test_clean_folder)
+    for vol in params["volumes"]:
+        for spd in params["speeds"]:
+            modified_audio = modify_audio(test_audio[0], volume_factor=vol, speed_factor=spd)
+            sf.write(os.path.join(test_clean_folder, f"test_audio_{vol}vol_{spd}spd.wav"), modified_audio, samplerate=orig_sr)
+            if params["num_interrupts"] > 0:
+                modified_audio_interrupted = add_interruptions(modified_audio, orig_sr, interruption_length=params["len_interrupts"], num_interruptions=params["num_interrupts"])
+                sf.write(os.path.join(test_clean_folder, f"test_audio_{vol}vol_{spd}spd_{params["num_interrupts"]}interrupts.wav"), modified_audio_interrupted, samplerate=orig_sr)
+
+
+    test_text_res = stt(test_audio, test_language)
+    print(test_text_res)
+
+    for i in range(params["noise_layers"]):
+        if i == 0:
+            synthesize_noisy_speech(sampling_rate=test_sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], clean_dir=test_clean_folder, noisyspeech_dir=test_noisy_folder, clean_proc_dir=test_clean_proc_folder, noise_proc_dir=test_noise_proc_folder)
+        elif i == 1:
+            synthesize_noisy_speech(sampling_rate=test_sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], clean_dir=test_noisy_folder, noisyspeech_dir=test_noisy_folder + f"_{i}", clean_proc_dir=test_clean_proc_folder + f"_{i}", noise_proc_dir=test_noise_proc_folder + f"_{i}")
+        else:
+            synthesize_noisy_speech(sampling_rate=test_sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], clean_dir=test_noisy_folder + f"_{i-1}", noisyspeech_dir=test_noisy_folder + f"_{i}", clean_proc_dir=test_clean_proc_folder + f"_{i}", noise_proc_dir=test_noise_proc_folder + f"_{i}")
+    
+
+    test_text = test_texts[0][0]
+    noisy_filenames = glob.glob(os.path.join(test_noisy_folder + "*", '*.wav'))
+    print(f"Testing STT on {len(noisy_filenames)} noisy audio files...")
+    print(f"Original text: {test_text}")
+    for noisy_file in noisy_filenames:
+        noisy_test_text = stt(noisy_file, test_language)
+        if noisy_test_text [0][0] == " ":
+            noisy_test_text[0] = noisy_test_text[0][1:]
+        print(f"Transcription for {noisy_file}: {noisy_test_text[0]}")
+        print(f"Levenshtein distance to original: {Levenshtein.distance(test_text, noisy_test_text[0])}, ratio: {Levenshtein.ratio(test_text, noisy_test_text[0])}")
+        print(f"Required Edits: {Levenshtein.editops(noisy_test_text[0], test_text)}")
         print("--------------------------------------------------")
 
 if __name__ == "__main__":
 
     if TEST_CASE:
-        test_text = "Maria Sklodowska-Curie"
-        #test_text = "17534"
-        test_textclass = Textclasses.NAME
-        #test_textclass = Textclasses.NUMBER
+        test_texts = [("Maria Sklodowska-Curie", Textclasses.NAME)]
+        #test_text = ("17534", Textclasses.NUMBER)
         test_language = "german"
-        test_speaker = "Ryan"
-        test_instruct = ""
+        #test_speaker = "Ryan"
+        test_voices= [("de_DE-thorsten_emotional-medium.onnx", [1])]
+        #test_instruct = ""
         test_sr = 16000
 
-        test_case(test_text, test_textclass, test_language, test_speaker, test_instruct, test_sr)
+        test_case_piper(test_texts, test_language, test_voices, test_sr)
         
 
 
@@ -189,7 +289,13 @@ if __name__ == "__main__":
 
         text_language = "german"
 
-        if ALL_LANGUAGES:
+        # "amused": 0, "angry": 1, "disgusted": 2, "drunk": 3, "neutral": 4, "sleepy": 5, "surprised": 6, "whisper": 7
+        voices = [
+            ("de_DE-thorsten_emotional-medium.onnx", [1, 3, 5, 7]),
+            ("Thorsten-Voice_Hessisch_Piper_high-Oct2023.onnx", None)
+        ]
+
+        """if ALL_LANGUAGES:
             languages = "all"
         else:
             languages = [
@@ -206,16 +312,21 @@ if __name__ == "__main__":
         instructs=[
             "speak slurred and erratic as if drunk, unintelligible and without clear words and with heavy german accent",
             #"speak breathlessly in an extremely high-pitched and squeaky voice"
-        ]
+        ]"""
 
-        if not ALL_LANGUAGES and not ALL_SPEAK:
-            versions = []
-            for i in range(len(original_texts)):
-                params = PARAMS[original_texts[i][1]]
-                versions.append(len(languages)*len(speakers)*len(instructs)*len(params["volumes"])*len(params["speeds"])*(2 if params["num_interrupts"] > 0 else 1))
+
+        #if not ALL_LANGUAGES and not ALL_SPEAK:
+        versions = []
+        for i in range(len(original_texts)):
+            params = PARAMS[original_texts[i][1]]
+            num_versions = 0
+            for voice in voices:
+                num_versions += (len(voice[1]) if voice[1] is not None else 1) * len(params["volumes"]) * len(params["speeds"]) * (2 if params["num_interrupts"] > 0 else 1)
+            versions.append(num_versions)
         sr = 16000
         
-        audios, orig_sr = tts(text=original_texts, language=languages, speaker=speakers, instruct=instructs)
+        audio_data, orig_sr = tts_piper(texts=original_texts, voices=voices)
+        audios = [data[0] for data in audio_data]
         audios = [(audios[i], original_texts[i][1]) for i in range(len(audios))]
         if not SKIP_STT:
             texts = stt(audios, language=text_language)
@@ -257,7 +368,7 @@ if __name__ == "__main__":
                     modified_audios.append((modified_audio, textclass))
                     if params["num_interrupts"] > 0:
                         modified_audio_interrupted = add_interruptions(modified_audio, orig_sr, interruption_length=params["len_interrupts"], num_interruptions=params["num_interrupts"])
-                        modified_audios.append((modified_audio, textclass))
+                        modified_audios.append((modified_audio_interrupted, textclass))
         print(f"Number of modified audio versions: {len(modified_audios)}, expected: {sum(versions)}")
                         
         """

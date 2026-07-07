@@ -21,7 +21,7 @@ PARAMS = {
     Textclasses.NAME: {
         "noise_layers": 1,
         "volumes": [0.7, 1.0],
-        "speeds": [1.0, 2.0],
+        "speeds": [1.0, 1.5],
         "num_interrupts": 1,
         "len_interrupts": 0.2,
         "snr_lower": 10.0,

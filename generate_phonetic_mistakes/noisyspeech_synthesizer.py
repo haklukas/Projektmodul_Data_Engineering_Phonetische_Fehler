@@ -4,61 +4,64 @@
 import glob
 import shutil
 import numpy as np
-import soundfile as sf
 import os
-import argparse
-import configparser as CP
 from audiolib import norm_audio, audioread, audiowrite, snr_mixer
 import librosa
 
-# Configuration for generating Noisy Speech Dataset
-
-# - audios: List of numpy audio waveforms to be used for generating noisy speech instead of reading from the source directory. Default is None, which means the audio files will be read from the source directory.
-# - orig_sr: Original sampling rate of the input audio waveforms. Default is 16000 Hz.
-# - sampling_rate: Specify the sampling rate. Default is 16 kHz
-# - audioformat: default is .wav
-# - silence_length: Duration of silence introduced during noise transitions.
-# - snr_lower: Lower bound for SNR required (default: 0 dB)
-# - snr_upper: Upper bound for SNR required (default: 40 dB)
-# - total_snrlevels: Number of SNR levels required (default: 5, which means there are 5 levels between snr_lower and snr_upper)
-# - noise_dir: Default is None. But specify the noise directory path if noise files are not in the source directory
-# - clean_dir: Default is None. But specify the clean speech directory path if speech files are not in the source directory
-# - noise_types_excluded: Noise files starting with the following tags to be excluded in the noise list. Example: noise_types_excluded= ["Babble", "AirConditioner"]
-#                         Default is None if no noise files to be excluded.
-# - write_processed_files: If True, the processed noisy speech,clean speech and noise files will be saved in the output directories. (default: true)
-# - noisyspeech_dir: Default is None. But specify the output directory path for noisy speech files if you want to save them in a different directory than the source directory
-# - clean_proc_dir: Default is None. But specify the output directory path for processed clean speech files if you want to save them in a different directory than the source directory
-# - noise_proc_dir: Default is None. But specify the output directory path for processed noise files if you want to save them in a different directory than the source directory
-
 def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper=40.0, total_snrlevels=5, clean_dir=None, noise_dir=None, sampling_rate=16000, audioformat='*.wav', silence_length=0.2, write_processed_files=True, noisyspeech_dir=None, clean_proc_dir=None, noise_proc_dir=None, noise_types_excluded=None):
+    """
+    Description:
+        Generate noisy speech examples by mixing clean speech with environmental noise
+        at various SNR levels. Can read from disk or accept in-memory audio arrays.
+
+    Args:
+        audios: Optional list of clean numpy audio arrays to use instead of reading them from clean_dir.
+        orig_sr: Original sampling rate of input audio waveforms in Hz (default: 16000).
+        snr_lower: Lower bound for SNR in dB (default: 0 dB).
+        snr_upper: Upper bound for SNR in dB (default: 40 dB).
+        total_snrlevels: Number of SNR levels to generate between lower and upper bound. Includes the bounds themselves (default: 5).
+        clean_dir: Directory containing clean speech files (if audios is None) (default: None, which looks at 'clean').
+        noise_dir: Directory containing noise audio files (default: None, which looks at 'noise').
+        sampling_rate: Output sampling rate in Hz (default: 16000).
+        audioformat: File format for audio files (default: '*.wav').
+        silence_length: Duration of silence in s introduced during noise transitions occuring if a noise file is shorter than the audio (default: 0.2).
+        write_processed_files: If True, write processed clean/noisy/noise files to disk. (default: True)
+        noisyspeech_dir: Output directory for noisy speech files. (default: None, which creates 'NoisySpeech_After')
+        clean_proc_dir: Output directory for processed clean speech files (default: None, which creates 'CleanSpeech_After').
+        noise_proc_dir: Output directory for processed noise files(default: None, which creates 'Noise_After').
+        noise_types_excluded: Optional list of filename prefixes to exclude from noise pool, for example: noise_types_excluded= ["Babble", "AirConditioner"] (default: None).
+
+    Returns:
+        (list, list, list): Tuple containing lists of the noisy speech, clean speech and processed noise
+    """
 
     print("Starting synthesis of noisy speech dataset...")
 
     if audios is None:
         if clean_dir is None:
-            clean_dir = os.path.join(os.path.dirname(__file__), 'clean')
+            clean_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "clean"))
         if not os.path.exists(clean_dir):
             assert False, ("Clean speech data is required")
     
     if noise_dir is None:
-        noise_dir = os.path.join(os.path.dirname(__file__), 'noise')
+        noise_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "noise"))
     if not os.path.exists(noise_dir):
         assert False, ("Noise data is required")
         
     fs = float(sampling_rate)
     if write_processed_files:
         if noisyspeech_dir is None:
-            noisyspeech_dir = os.path.join(os.path.dirname(__file__), 'NoisySpeech_After')
+            noisyspeech_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "NoisySpeech_After"))
         if os.path.exists(noisyspeech_dir):
             shutil.rmtree(noisyspeech_dir)
         os.makedirs(noisyspeech_dir)
         if clean_proc_dir is None:     
-            clean_proc_dir = os.path.join(os.path.dirname(__file__), 'CleanSpeech_After')
+            clean_proc_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "CleanSpeech_After"))
         if os.path.exists(clean_proc_dir):
             shutil.rmtree(clean_proc_dir)
         os.makedirs(clean_proc_dir)
         if noise_proc_dir is None:
-            noise_proc_dir = os.path.join(os.path.dirname(__file__), 'Noise_After')
+            noise_proc_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "Noise_After"))
         if os.path.exists(noise_proc_dir):
             shutil.rmtree(noise_proc_dir)
         os.makedirs(noise_proc_dir)

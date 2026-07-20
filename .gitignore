@@ -438,7 +438,6 @@ MS-SNSD*
 [Ss]creenshot*
 [Cc]lean*/
 [Nn]otiz*
-noisyspeech_synthesizer.py
 noisyspeech_synthesizer.cfg
 
 *.onnx

@@ -48,6 +48,7 @@ def tts_piper_single(text, voices):
             wav_bytes = buffer.getvalue()
 
             wav, new_samplerate = sf.read(io.BytesIO(wav_bytes))
+            print(f"old: {samplerate}, new: {new_samplerate}")
             if new_samplerate != samplerate:
                 if samplerate == -1:
                     samplerate = new_samplerate
@@ -75,6 +76,7 @@ def tts_piper_single(text, voices):
 
                 wav_bytes = buffer.getvalue()
                 wav, new_samplerate = sf.read(io.BytesIO(wav_bytes))
+                print(f"old: {samplerate}, new: {new_samplerate}")
                 if new_samplerate != samplerate:
                     if samplerate == -1:
                         samplerate = new_samplerate

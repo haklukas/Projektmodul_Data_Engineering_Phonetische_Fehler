@@ -8,6 +8,8 @@ import Levenshtein
 import phonetics
 import cologne_phonetics
 import re
+from num2words import num2words
+import string
 from textclass_params import Textclasses, PARAMS
 from tts import tts_single
 from stt import stt
@@ -25,6 +27,18 @@ def evaluate_phonetic_mistakes(text, noisy_text, language):
     Returns:
         None (prints evaluation summary to stdout).
     """
+    translator = str.maketrans('', '', string.punctuation)
+    text = text.translate(translator)
+    if language == "english":
+        text = re.sub(r"\d+", lambda m: num2words(int(m.group())), str.replace(text, ))
+    elif language == "german":
+        text = re.sub(r"\d+", lambda m: num2words(int(m.group()), lang= "de"), text)
+    
+    noisy_text = noisy_text.translate(translator)
+    if language == "english":
+        noisy_text = re.sub(r"\d+", lambda m: num2words(int(m.group())), noisy_text)
+    elif language == "german":
+        noisy_text = re.sub(r"\d+", lambda m: num2words(int(m.group()), lang= "de"), noisy_text)
 
     print("--------------------------------------------------")
     print("Evaluation:")
@@ -152,8 +166,14 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
     if params["noise_layers"] > 0:
             
         noisy_speech_all = []
+        step = 0
+        sr = 16000
         for i in range(params["noise_layers"]):
-            noisy_speech, clean_speech, noise = synthesize_noisy_speech(audios = audios, orig_sr=orig_sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], write_processed_files = True, sampling_rate=16000)
+            step += 1
+            if step == 1:
+                noisy_speech, clean_speech, noise = synthesize_noisy_speech(audios = audios, orig_sr=orig_sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], write_processed_files = True, sampling_rate=sr)
+            else:
+                noisy_speech, clean_speech, noise = synthesize_noisy_speech(audios = audios, orig_sr=sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], write_processed_files = True, sampling_rate=sr)
             noisy_speech_all.extend(noisy_speech)
             audios = noisy_speech
         

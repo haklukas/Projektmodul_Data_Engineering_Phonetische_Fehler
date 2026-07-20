@@ -5,7 +5,7 @@ import glob
 import shutil
 import numpy as np
 import os
-from audiolib import norm_audio, audioread, audiowrite, snr_mixer
+from audiolib import norm_audio, audioread, audiowrite, snr_mixer, match_samplerate
 import librosa
 
 def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper=40.0, total_snrlevels=5, clean_dir=None, noise_dir=None, sampling_rate=16000, audioformat='*.wav', silence_length=0.2, write_processed_files=True, noisyspeech_dir=None, clean_proc_dir=None, noise_proc_dir=None, noise_types_excluded=None):
@@ -94,7 +94,7 @@ def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper
             clean = norm_audio(audios[idx_s])
 
         if orig_sr != sampling_rate:
-            clean = librosa.resample(clean, orig_sr=orig_sr, target_sr=sampling_rate)
+            clean = match_samplerate(clean, orig_sr, sampling_rate)
 
         idx_n = np.random.randint(0, np.size(noisefilenames))
         noise, fs = audioread(noisefilenames[idx_n])

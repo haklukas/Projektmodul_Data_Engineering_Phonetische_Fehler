@@ -2,11 +2,15 @@
 from pathlib import Path
 import soundfile as sf
 import numpy as np
+import random
 from audiolib import modify_audio, add_interruptions, audioread, audiowrite
 from noisyspeech_synthesizer import *
 import Levenshtein
 import phonetics
 import cologne_phonetics
+import textdistance
+import spellwise
+import jellyfish
 import re
 from num2words import num2words
 import string
@@ -25,8 +29,9 @@ def evaluate_phonetic_mistakes(text, noisy_text, language):
         language: Language identifier (e.g., "german", "english").
 
     Returns:
-        None (prints evaluation summary to stdout).
+        dict of metrics
     """
+
     translator = str.maketrans('', '', string.punctuation)
     text = text.translate(translator)
     if language == "english":
@@ -40,6 +45,8 @@ def evaluate_phonetic_mistakes(text, noisy_text, language):
     elif language == "german":
         noisy_text = re.sub(r"\d+", lambda m: num2words(int(m.group()), lang= "de"), noisy_text)
 
+    eval = dict()
+
     print("--------------------------------------------------")
     print("Evaluation:")
     print(f"Original text: {text}")
@@ -52,34 +59,79 @@ def evaluate_phonetic_mistakes(text, noisy_text, language):
     levenshtein_req_edits = Levenshtein.editops(text, noisy_text)
     print(f"Required Edits: {levenshtein_req_edits}")
     print("------------------")
+    eval["levenshtein"] = levenshtein_dist
 
-    eval = dict()
+    
+    jaro_winkler = Levenshtein.jaro_winkler(text, noisy_text)
+    jaro_winkler_dist = 1 - jaro_winkler
+    print(f"Jaro Winkler similiarity to original: {jaro_winkler}, distance: {jaro_winkler_dist}")
+    print("------------------")
+    eval["jaro_winkler"] = jaro_winkler_dist
 
-    if language == "german":
-        print("Cologne Phonetics:")
-        cph_text = cologne_phonetics.encode(text)
-        encoded_text = ""
-        for _, encoded_substr in cph_text:
-            encoded_text += encoded_substr 
-        print(f"Original text encoded by Cologne Phonetics: {encoded_text}")
-        cph_noisy_text = cologne_phonetics.encode(noisy_text)
-        encoded_noisy_text = ""
-        for _, encoded_substr in cph_noisy_text:
-            encoded_noisy_text += encoded_substr
-        eval["cologne_phonetics"] = (encoded_text, encoded_noisy_text)
-        print(f"Noisy text encoded by Cologne Phonetics: {encoded_noisy_text}")
-        print("------------------")
+    damerau = textdistance.DamerauLevenshtein().distance(text, noisy_text)
+    print(f"Damerau-Levenshtein distance to original: {damerau}")
+    print("------------------")
+    eval["damerau"] = damerau
 
-    if language == "english":
-        print("Soundex:")
-        sanitized_text = re.sub('[^a-z]', '', str(text).lower())
-        sanitized_noisy = re.sub('[^a-z]', '', str(noisy_text).lower())
-        soundex_text = phonetics.soundex(sanitized_text) if sanitized_text else ''
-        print(f"Original text encoded by Soundex: {soundex_text}")
-        soundex_noisy_text = phonetics.soundex(sanitized_noisy) if sanitized_noisy else ''
-        eval["soundex"] = (soundex_text, soundex_noisy_text)
-        print(f"Noisy text encoded by Soundex: {soundex_noisy_text}")
-        print("------------------")
+    monge_elkan_orig_left = textdistance.MongeElkan().distance(text, noisy_text)
+    print(f"Monge-Elkan distance to original with original left: {monge_elkan_orig_left}")
+    print("------------------")
+    eval["monge_elkan_orig_left"] = monge_elkan_orig_left
+
+    monge_elkan_orig_right = textdistance.MongeElkan().distance(noisy_text, text)
+    print(f"Monge-Elkan distance to original with original right: {monge_elkan_orig_right}")
+    print("------------------")
+    eval["monge_elkan_orig_right"] = monge_elkan_orig_right
+
+    lcsstr = textdistance.LCSStr().distance(text, noisy_text)
+    print(f"Longest common substring distance with original: {lcsstr}")
+    print("------------------")
+    eval["lcsstr"] = lcsstr
+
+    caver1 = spellwise.CaverphoneOne()
+    caver1.add_words([text])
+    caver1_dist = caver1.get_suggestions(noisy_text, max_distance=500)[0]["distance"]
+    print(f"CaverphoneOne distance to original: {caver1_dist}")
+    print("------------------")
+    eval["caverphoneOne"] = caver1_dist
+
+    caver2 = spellwise.CaverphoneTwo()
+    caver2.add_words([text])
+    caver2_dist = caver2.get_suggestions(noisy_text, max_distance=500)[0]["distance"]
+    print(f"CaverphoneTwo distance to original: {caver2_dist}")
+    print("------------------")
+    eval["caverphoneTwo"] = caver2_dist
+
+    nysiis_text = jellyfish.nysiis(text)
+    print(f"Original text encoded by nysiis: {nysiis_text}")
+    nysiis_noisy_text = jellyfish.nysiis(noisy_text)
+    print(f"Noisy text encoded by nysiis: {nysiis_noisy_text}")
+    print("------------------")
+    eval["nysiis"] = (nysiis_text, nysiis_noisy_text)
+    
+    print("Cologne Phonetics:")
+    cph_text = cologne_phonetics.encode(text)
+    encoded_text = ""
+    for _, encoded_substr in cph_text:
+        encoded_text += encoded_substr 
+    print(f"Original text encoded by Cologne Phonetics: {encoded_text}")
+    cph_noisy_text = cologne_phonetics.encode(noisy_text)
+    encoded_noisy_text = ""
+    for _, encoded_substr in cph_noisy_text:
+        encoded_noisy_text += encoded_substr
+    eval["cologne_phonetics"] = (encoded_text, encoded_noisy_text)
+    print(f"Noisy text encoded by Cologne Phonetics: {encoded_noisy_text}")
+    print("------------------")
+    
+    print("Soundex:")
+    sanitized_text = re.sub('[^a-z]', '', str(text).lower())
+    sanitized_noisy = re.sub('[^a-z]', '', str(noisy_text).lower())
+    soundex_text = phonetics.soundex(sanitized_text) if sanitized_text else ''
+    print(f"Original text encoded by Soundex: {soundex_text}")
+    soundex_noisy_text = phonetics.soundex(sanitized_noisy) if sanitized_noisy else ''
+    eval["soundex"] = (soundex_text, soundex_noisy_text)
+    print(f"Noisy text encoded by Soundex: {soundex_noisy_text}")
+    print("------------------")
 
     print("Metaphone:")
     metaphone_text = phonetics.metaphone(str(text).lower())
@@ -96,8 +148,68 @@ def evaluate_phonetic_mistakes(text, noisy_text, language):
     eval["dmetaphone"] = (dmetaphone_text, dmetaphone_noisy_text)
     print(f"Noisy text encoded by Double Metaphone: {dmetaphone_noisy_text}")
     print("--------------------------------------------------")
-
+    
     return eval
+
+def normalize_metrics(metrics_list):
+    norm_metrics_list = []
+    min_metrics = dict()
+    max_metrics = dict()
+    for metrics in metrics_list:
+        norm_metrics = dict()
+        for metric_name, metric_value in metrics.items():
+            if metric_name == "dmetaphone":
+                lev_dists = []
+                lev_dists.append(Levenshtein.distance(metric_value[0][0], metric_value[1][0]))
+                if metric_value[1][1] != "":
+                    lev_dists.append(Levenshtein.distance(metric_value[0][0], metric_value[1][1]))
+                if metric_value[0][1] != "":
+                    lev_dists.append(Levenshtein.distance(metric_value[0][1], metric_value[1][0]))
+                    if metric_value[1][1] != "":
+                        lev_dists.append(Levenshtein.distance(metric_value[0][1], metric_value[1][1]))
+                norm_metrics[metric_name] = min(lev_dists)
+            elif isinstance(metric_value, tuple):
+                norm_metrics[metric_name] = Levenshtein.distance(metric_value[0], metric_value[1])
+            else:
+                norm_metrics[metric_name] = metric_value
+            if metric_name not in min_metrics or norm_metrics[metric_name] < min_metrics[metric_name]:
+                min_metrics[metric_name] = norm_metrics[metric_name]
+            if metric_name not in max_metrics or norm_metrics[metric_name] > max_metrics[metric_name]:
+                            max_metrics[metric_name] = norm_metrics[metric_name]
+        norm_metrics_list.append(norm_metrics)
+
+    print(f"Min metrics: {min_metrics}")
+    print(f"Max metrics: {max_metrics}")
+
+    for metrics in norm_metrics_list:
+        for metric_name in metrics.keys():
+            metrics[metric_name] = (metrics[metric_name] - min_metrics[metric_name]) / (max_metrics[metric_name] - min_metrics[metric_name])
+
+    print(norm_metrics_list)
+
+    return norm_metrics_list
+
+def pick_mistake(text, noisy_texts, language, severity):
+    metrics_list = []
+    noisy_texts = [noisy_text for noisy_text in noisy_texts if noisy_text != text]
+    for noisy_text in noisy_texts:
+        metrics = evaluate_phonetic_mistakes(text, noisy_text, language)
+        metrics_list.append(metrics)
+    metrics_list = normalize_metrics(metrics_list)
+    combo_metric_list = [(noisy_texts[i], sum(metrics_list[i].values()) / len(metrics_list[i].values())) for i in range(len(noisy_texts))]
+    print(f"CML: {combo_metric_list}")
+    combo_metric_list.sort(key= lambda combo_metric : combo_metric[1])
+    print(f"CML2: {combo_metric_list}")
+    split_list = np.array_split(np.array(combo_metric_list, dtype=np.dtype('U500, float')), 10)
+    print(f"Split list: {split_list}")
+    candidates = list(split_list[severity-1])
+    print(f"Candidates: {candidates}")
+    if candidates == []:
+        mistake = combo_metric_list[-1]
+    else:
+        mistake = random.choice(candidates)
+    print(mistake)
+    return mistake[0]
 
 def is_similar_sounding(text, noisy_text, language):
 
@@ -122,7 +234,7 @@ def is_similar_sounding(text, noisy_text, language):
 
 
 
-def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voices, tts_name="Piper", stt_name="Whisper_turbo"):
+def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voices, severity, tts_name="Piper", stt_name="Whisper_turbo"):
     """
     Description:
         Synthesize audio, apply transformations and noise layers, run STT, and evaluate phonetic mistakes.
@@ -133,7 +245,9 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
         text_language: Language of the input text.
         stt_language: Language hint for the STT engine.
         voices: Voices configuration for synthesis.
-        tts: TTS engine selection (default: "Piper").
+        severity: desired severity of mistakes. From 1 to 10.
+        tts_name: TTS engine selection (default: "Piper").
+        stt_name: STT engine selection (default: "Whisper").
 
     Returns:
         None (prints evaluation results).
@@ -182,10 +296,11 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
     else:
         noisy_texts = stt(audios, language=stt_language, stt_name=stt_name)
 
-    similar_sounding_texts = []
-    for noisy_text in noisy_texts:
-        if is_similar_sounding(text=text, noisy_text=noisy_text, language=text_language):
-            similar_sounding_texts.append(noisy_text)
+    mistake = pick_mistake(text, noisy_texts, text_language, severity)
+    #similar_sounding_texts = []
+    #for noisy_text in noisy_texts:
+    #    if is_similar_sounding(text=text, noisy_text=noisy_text, language=text_language):
+    #        similar_sounding_texts.append(noisy_text)
 
-    print(noisy_texts)
-    return similar_sounding_texts
+    #print(noisy_texts)
+    return mistake

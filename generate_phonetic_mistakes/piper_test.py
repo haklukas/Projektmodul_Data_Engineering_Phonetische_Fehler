@@ -66,5 +66,5 @@ if __name__ == "__main__":
         "total_snrlevels": 2
     }
 
-    results = generate_phonetic_mistakes(text, textclass, text_language, stt_language, voices, stt_name="Whisper_tiny_en")
+    results = generate_phonetic_mistakes(text, textclass, text_language, stt_language, voices, severity=3, stt_name="Whisper_tiny_en")
     print(results)

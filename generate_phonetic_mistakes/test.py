@@ -3,8 +3,24 @@ from piper import PiperVoice, SynthesisConfig
 import soundfile as sf
 import io
 import os
+import numpy as np
 from tts import tts_piper_single
+import phonetics
+import textdistance
+from generate_phonetic_mistakes import pick_mistake
 
+#print(np.array([('a', 1), ("b", 2)], dtype=np.dtype('U50, float')))
+
+#print(textdistance.DamerauLevenshtein().distance('text', 'test'))
+
+
+text = "test"
+
+noisy_texts = ["test", "text", "Treff", "taff", "teste", "trist", "rest", "klec", "djsakl"]
+
+pick_mistake(text, noisy_texts, "german", 5)
+
+"""
 #voice = PiperVoice.load("en_US-lessac-medium.onnx")
 #text = "Welcome to the world of speech synthesis!"
 voice_1_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "piper_voices", "de_DE-thorsten_emotional-medium.onnx"))
@@ -38,4 +54,4 @@ wav_bytes = buffer.getvalue()
 
 data, samplerate = sf.read(io.BytesIO(wav_bytes))
 
-sf.write("pipertest_buffer.wav", data, samplerate)
+sf.write("pipertest_buffer.wav", data, samplerate)"""

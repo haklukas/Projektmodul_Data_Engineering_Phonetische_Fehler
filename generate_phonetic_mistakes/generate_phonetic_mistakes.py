@@ -232,8 +232,6 @@ def is_similar_sounding(text, noisy_text, language):
     return is_similar_sounding
 
 
-
-
 def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voices, severity, tts_name="Piper", stt_name="Whisper_turbo"):
     """
     Description:
@@ -259,23 +257,30 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
         params = textclass
     audio_data, orig_sr = tts_single(text=text, voices=voices, tts_name=tts_name)
     audios = [data[0] for data in audio_data]
+    audio_metadata = [data[1] for data in audio_data]
 
     modified_audios = []
-    for audio in audios:
+    modified_audio_metadata = []
+    for i in range(len(audios)):
+        audio = audios[i]
         for vol in params["volumes"]:
             for spd in params["speeds"]:
                 modified_audio = modify_audio(audio, volume_factor=vol, speed_factor=spd)
                 modified_audios.append(modified_audio)
+                modified_audio_metadata.append(audio_metadata[i])
                 if params["num_interrupts"] > 0:
                     modified_audio_interrupted = add_interruptions(modified_audio, orig_sr, interruption_length=params["len_interrupts"], num_interruptions=params["num_interrupts"])
                     modified_audios.append(modified_audio_interrupted)
-                    
+                    modified_audio_metadata.append(audio_metadata[i])
+
     for i in range(len(modified_audios)):
         audiowrite(modified_audios[i], orig_sr, os.path.join("clean", f"modified_audio_{i}.wav"))
 
     print(f"Number of modified audio versions: {len(modified_audios)}")
+    print(f"Number of modified audio metadata entries: {len(modified_audio_metadata)}")
     audios = modified_audios
 
+    noisy_speech_metadata = []
     print(f"orig_sr: {orig_sr}")
     if params["noise_layers"] > 0:
             
@@ -289,18 +294,51 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
             else:
                 noisy_speech, clean_speech, noise = synthesize_noisy_speech(audios = audios, orig_sr=sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], write_processed_files = True, sampling_rate=sr)
             noisy_speech_all.extend(noisy_speech)
-            audios = noisy_speech
+            print("##########################################")
+            print(f"Number of new noisy speech versions after layer {step}: {len(audios)}")
+            noisy_versions_per_clean_audio = len(noisy_speech) // len(audios)
+            print(f"Number of noisy versions per clean audio: {noisy_versions_per_clean_audio}")
+            print(len(noisy_speech) / len(audios))
+            noisy_speech_metadata.extend([md for md in modified_audio_metadata for _ in range(noisy_versions_per_clean_audio)])
+            print(len(noisy_speech_metadata))
+            print("##########################################")
+            audios = noisy_speech.copy()
+            modified_audio_metadata = noisy_speech_metadata.copy()
         
         noisy_texts = stt(noisy_speech_all, language=stt_language, stt_name=stt_name)
 
     else:
         noisy_texts = stt(audios, language=stt_language, stt_name=stt_name)
+        print("##########################################")
+        print(f"Number of new noisy speech versions after layer {step}: {len(audios)}")
+        noisy_versions_per_clean_audio = len(noisy_speech) // len(audios)
+        print(f"Number of noisy versions per clean audio: {noisy_versions_per_clean_audio}")
+        print(len(noisy_speech) / len(audios))
+        print("##########################################")
+        audios = noisy_speech
+        noisy_speech_metadata.extend([md for md in audio_metadata for _ in range(noisy_versions_per_clean_audio)])
 
-    mistake = pick_mistake(text, noisy_texts, text_language, severity)
+    evalspeech_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "EvalSpeech"))
+
+    if os.path.exists(evalspeech_dir):
+        shutil.rmtree(evalspeech_dir)
+    os.makedirs(evalspeech_dir)
+
+    for i in range(len(noisy_texts)):
+        noisy_text = noisy_texts[i]
+        metadata = noisy_speech_metadata[i]
+        print(f"Noisy text: {noisy_text}")
+        voice_pack_path, speaker_id = metadata
+        evalspeech_data, eval_sr = tts_single(text=noisy_text, voices=[(voice_pack_path, [speaker_id])], tts_name=tts_name)
+        eval_audio = evalspeech_data[0][0]
+        audiowrite(eval_audio, eval_sr, os.path.join(evalspeech_dir, f"eval_{i}.wav"))
+   
+
+    #mistake = pick_mistake(text, noisy_texts, text_language, severity)
     #similar_sounding_texts = []
     #for noisy_text in noisy_texts:
     #    if is_similar_sounding(text=text, noisy_text=noisy_text, language=text_language):
     #        similar_sounding_texts.append(noisy_text)
 
     #print(noisy_texts)
-    return mistake
+    return 0

@@ -23,7 +23,7 @@ if __name__ == "__main__":
     #text = "Bosnien und Herzegowina"
     #text = "L'arc de Triomphe"
     #text = "Samsung"
-    text = "17543"
+    text = "19543"
     #text = "siebzehntausendfünfhundertfünfundfünfzig"
     #text = "ein heißer Mittwochabend mit vielen Eiswürfeln"
 

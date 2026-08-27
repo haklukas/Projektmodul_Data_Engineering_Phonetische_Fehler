@@ -59,7 +59,7 @@ document.getElementById("submitBtn").onclick = () => {
 };
 
 function sendResults() {
-  fetch("http://localhost:5000/save", {
+  fetch("/survey_upload", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ data: results })

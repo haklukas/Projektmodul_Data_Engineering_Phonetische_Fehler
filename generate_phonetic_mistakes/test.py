@@ -13,14 +13,58 @@ from generate_phonetic_mistakes import pick_mistake
 
 #print(textdistance.DamerauLevenshtein().distance('text', 'test'))
 
+t = [1, 2, 3]
+x = ["x1", "x2", "x3"]
 
+x2 = []
+t2 = []
+for i in range(len(x)):
+    x2.append(x[i] + "1")
+    t2.append(t[i])
+    x2.append(x[i] + "2")
+    t2.append(t[i])
+
+print(x2)
+print(t2)
+
+x3 = []
+t3 = []
+
+step = 0
+for i in range(2):
+    new = []
+    for j in range(len(x2)):
+        new.append(x2[j] + "1")
+        new.append(x2[j] + "2")
+        new.append(x2[j] + "3")
+        new.append(x2[j] + "4")
+    print(f"new: {new}")
+    x3.extend(new)
+    print(f"x3: {x3}")
+    print("##########################################")
+    print(f"Number of new noisy speech versions after layer {step}: {len(new)}")
+    print(f"Len of audios after layer {step}: {len(x2)}")
+    noisy_versions_per_clean_audio = len(new) // len(x2)
+    print(f"Number of noisy versions per clean audio: {noisy_versions_per_clean_audio}")
+    print(len(new) / len(x2))
+    t3.extend([md for md in t2 for _ in range(noisy_versions_per_clean_audio)])
+    print(len(t3))
+    print(f"t3: {t3}")
+    print("##########################################")
+    step = step + 1
+    x2 = x3.copy()
+    t2 = t3.copy()
+
+for i in range(len(x3)):
+    print(f"x3: {x3[i]}, t3: {t3[i]}")
+"""
 text = "test"
 
 noisy_texts = ["test", "text", "Treff", "taff", "teste", "trist", "rest", "klec", "djsakl"]
 
 pick_mistake(text, noisy_texts, "german", 5)
 
-"""
+
 #voice = PiperVoice.load("en_US-lessac-medium.onnx")
 #text = "Welcome to the world of speech synthesis!"
 voice_1_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "piper_voices", "de_DE-thorsten_emotional-medium.onnx"))

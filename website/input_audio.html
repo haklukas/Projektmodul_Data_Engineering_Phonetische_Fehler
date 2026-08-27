@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Input Audio Samples</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>Input Audio Samples</h1>
+
+    <div id="recordingDiv">
+        <p>Here you can input audio samples for text snippets. <br>
+            Please speak in english, but do not hide your accent or dialect. <br>
+            You may re-record the sample as often as you like before submitting. <br>
+            Once you are happy with your recording, you can submit it and the next text snippet will be displayed.        
+        </p>
+        
+        <div>
+            <p>Next Text Snippet:</p>
+            <p id="nextWord"></p>
+        </div>
+        
+        <div>
+            <button id="startButton">Record Audio Sample</button>
+            <button id="stopButton">Stop Recording</button>
+        </div>
+        
+
+        <div id="audioPlaybackDiv">
+            <label for="audioPlayback">Currently recorded audio: <br></label>
+            <audio id="audioPlayback" controls></audio>
+        </div>
+        
+        <button id="submitBtn">Submit Audio Sample</button>
+    </div>
+
+    <div id="completionDiv" hidden>
+        <h2>Thank you for your submissions!</h2>
+        <p>You have completed all the text snippets. Your audio samples have been submitted successfully.</p>
+    </div>
+
+    <a href="index.html">Go back to the Main Page</a>
+    
+    <script src="recording.js"></script>
+
+</body>
+</html>

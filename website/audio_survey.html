@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Audio Survey</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Audio Survey</h1>
+
+  <div id="status" style="margin-bottom:10px; font-weight:bold;">
+    Audio 0 of 0
+  </div>
+
+  <audio id="player" controls></audio>
+
+  <div>
+    <input id="userInput" type="text" placeholder="Your answer">
+    <button id="submitBtn">Submit</button>
+  </div>
+
+  <div id="finishedMessage" style="display:none; margin-top:20px;">
+    <h2>All audios finished. Thank you for participating!</h2>
+  </div>
+
+  <a href="index.html">Go back to the Main Page</a>
+
+  <script src="script.js"></script>
+</body>
+</html>

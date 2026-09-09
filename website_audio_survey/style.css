@@ -1,0 +1,64 @@
+body {
+  font-family: sans-serif;
+  margin: 40px;
+}
+input {
+  margin-right: 10px;
+}
+.saveSuccess {
+  color: #176b2c;
+}
+.saveError {
+  color: #a32121;
+}
+.inactiveLink {
+  color: #777;
+  cursor: not-allowed;
+}
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 20px;
+  border: 1px solid #ccc;
+}
+.datasetSection h3 {
+  margin-bottom: 8px;
+}
+.fieldTable {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+.fieldTable th,
+.fieldTable td {
+  min-width: 220px;
+  max-width: 320px;
+  padding: 12px;
+  border-right: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  vertical-align: top;
+  text-align: left;
+}
+.fieldTable th:last-child,
+.fieldTable td:last-child {
+  border-right: 0;
+}
+.fieldTable th {
+  background: #f2f2f2;
+}
+.fieldText {
+  min-height: 3em;
+  margin-top: 0;
+  overflow-wrap: anywhere;
+}
+.fieldAudio {
+  max-width: 100%;
+  margin-top: 12px;
+}
+.fieldAudio:not([hidden]) {
+  display: block;
+}
+.fieldStatus {
+  display: block;
+  margin-top: 8px;
+}

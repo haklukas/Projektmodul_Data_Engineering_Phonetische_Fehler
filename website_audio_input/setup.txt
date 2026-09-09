@@ -1,0 +1,25 @@
+To setup the Audio Input Website as localhost, follow these steps:
+
+1. Install Visual Studio Code
+2. In VSCode, install the extension "Live Server". (The Extension menu can be found on the left edge of the screen)
+3. Open the website_audio_input folder with VSCode
+4. Install Node.js. If you use the windows installer at https://nodejs.org/en/download, you can leave all options in the installation wizard at their default.
+   The versions I successfully used were v26.7.0 and v24.20.0. The dependencies I used should not be that version-sensible.
+   If node -v and npm -v return versions, you can proceed. (You may need to restart VSCode for it to recognize the new commands)
+   (Use the command prompt, not powershell, which can be done down at the terminal with the arrow next to the +)
+5. Install the dependencies: npm install in the VSCode Terminal command prompt will install the dependencies listed in package.json
+6. In the VSCode terminal command prompt, node server.js will have the backend run at http://localhost:5000/.
+   Keep it running while submitting the audio!
+7. Rightclick on index_audio_input.html and click on "Open with Live Server". This should open the website in a browser.
+
+On the index page, you will be asked to enter your name before you can proceed to the Input link.
+
+After submitting the audios (given the presumed size of the survey, 15-20 rows for persons and books each should be plenty),
+please check if the following are in the folder:
+
+1. An "audio_upload"-directory with the .opus soundfiles, 9 per completed page
+2. audio_metadata.csv containing a row per soundfile (+ 1 row for the header)
+3. participant_names.jsonl containing the name you gave
+
+These are also the files that I then need back.
+Thanks for inputting audio!

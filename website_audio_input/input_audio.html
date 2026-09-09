@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Input Audio Samples</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>Input Audio Samples</h1>
+
+    <div id="recordingDiv">
+        <p>Here you can input audio samples for text snippets. <br>
+            Please speak in english, but do not hide your accent or dialect. <br>
+            You may re-record the sample as often as you like before submitting. <br>
+            Once you are happy with your recording, you can submit it and the next dataset rows will be displayed.        
+        </p>
+        <details>
+            <summary>Abbreviation help</summary>
+            <ul>
+                <li><strong>AVE:</strong> Avenue</li>
+                <li><strong>BLVD:</strong> Boulevard</li>
+                <li><strong>CT:</strong> Court</li>
+                <li><strong>DR:</strong> Drive</li>
+                <li><strong>HWY:</strong> Highway</li>
+                <li><strong>LN:</strong> Lane</li>
+                <li><strong>PK:</strong> Park</li>
+                <li><strong>PL:</strong> Place</li>
+                <li><strong>RD:</strong> Road</li>
+                <li><strong>RDG:</strong> Ridge</li>
+                <li><strong>ST:</strong> Street</li>
+                <li><strong>N,S,W,E:</strong> North, South, West, East</li>
+                <li><strong>#:</strong> Unit</li>
+            </ul>
+        </details>
+        <p id="rowStatus"></p>
+        <div id="datasetTables"></div>
+
+        <button id="stopButton">Stop Recording</button>
+        <p id="recordingStatus" role="status"></p>
+        
+        <button id="submitBtn">Submit Audio Sample</button>
+    </div>
+
+    <div id="completionDiv" hidden>
+        <h2>Thank you for your submissions!</h2>
+        <p>You have completed all the text snippets. Your audio samples have been submitted successfully.</p>
+    </div>
+
+    <button id="resetBtn">Reset</button>
+    <a href="index_audio_input.html">Go back to the Main Page</a>
+    
+    <script src="recording.js"></script>
+
+</body>
+</html>

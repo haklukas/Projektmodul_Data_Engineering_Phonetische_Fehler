@@ -440,5 +440,6 @@ MS-SNSD*
 [Ee]val*/
 [Nn]otiz*
 noisyspeech_synthesizer.cfg
+ncvoter_*.txt
 
 *.onnx

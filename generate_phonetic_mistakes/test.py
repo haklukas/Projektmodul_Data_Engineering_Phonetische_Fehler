@@ -8,11 +8,25 @@ from tts import tts_piper_single
 import phonetics
 import textdistance
 from generate_phonetic_mistakes import pick_mistake
+from audiolib import audioread, audiowrite
+from pydub import AudioSegment
 
 #print(np.array([('a', 1), ("b", 2)], dtype=np.dtype('U50, float')))
 
 #print(textdistance.DamerauLevenshtein().distance('text', 'test'))
 
+audio = AudioSegment.from_file("website/audio_uploads/uploaded_audio2")
+audio.export("website/audio_uploads/uploaded_audio2.wav", format="wav")
+
+with open("website/audio_uploads/uploaded_audio2.wav", "rb") as f:
+    print(f.read(16))
+
+audio, sr = audioread("website/audio_uploads/uploaded_audio2")
+
+audiowrite(audio, sr, "website/audio_uploads/uploaded_audio2.wav")
+
+
+"""
 t = [1, 2, 3]
 x = ["x1", "x2", "x3"]
 
@@ -56,7 +70,7 @@ for i in range(2):
     t2 = t3.copy()
 
 for i in range(len(x3)):
-    print(f"x3: {x3[i]}, t3: {t3[i]}")
+    print(f"x3: {x3[i]}, t3: {t3[i]}")"""
 """
 text = "test"
 

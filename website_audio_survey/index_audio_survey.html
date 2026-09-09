@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Project "Implementing Phonetic Mistakes with a TTS-STT-Pipeline"</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Audio Survey for the Project <br>"Implementing Phonetic Mistakes with a TTS-STT-Pipeline"</h1>
+  <p>Hello and thank you for helping with this project!</p>
+  <form id="nameForm">
+    <label for="participantName">Your name:</label>
+    <input id="participantName" name="participantName" type="text" required maxlength="100" autocomplete="name">
+    <button id="nameSubmit" type="submit" disabled>Submit name</button>
+    <p id="nameStatus" role="status" aria-live="polite"></p>
+  </form>
+  <p>Here you can participate in an <a id="activityLink" href="audio_survey.html" aria-disabled="true">audio survey</a> where you will listen to audio samples that are either spoken by real people or by a Text-to-Speech software
+    and answer questions about them.<br>
+    You can answer as many questions as you want and can continue in a new session at any point. 
+  </p>
+
+  <script src="index.js"></script>
+
+</body>
+</html>

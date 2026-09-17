@@ -9,20 +9,86 @@
 
   <h1>Audio Survey</h1>
 
-  <div id="status" style="margin-bottom:10px; font-weight:bold;">
-    Audio 0 of 0
+  <div class="surveyTabs" role="tablist" aria-label="Audio type">
+    <button id="cleanAudioTab" type="button" role="tab" aria-selected="true" aria-controls="cleanAudioPanel">Clean Audio</button>
+    <button id="dirtyAudioTab" type="button" role="tab" aria-selected="false" aria-controls="dirtyAudioPanel">Dirty Audio</button>
   </div>
 
-  <audio id="player" controls></audio>
+  <section id="cleanAudioPanel" class="surveyPanel" role="tabpanel" aria-labelledby="cleanAudioTab">
+    <div class="status" data-role="status">Audio 0 of 0</div>
+    <audio class="player" data-role="player" controls></audio>
+    <div class="surveyInputs" data-role="surveyInputs">
+      <fieldset>
+        <legend>I believe that this audio was created by:</legend>
+        <label><input type="checkbox" data-role="source" value="Text To Speech"> Text To Speech</label>
+        <label><input type="checkbox" data-role="source" value="A real human"> A real human</label>
+      </fieldset>
+      <label>How close does this sound to a human?</label>
+      <input data-role="humanCloseness" type="range" min="1" max="10" step="1">
+      <output data-role="humanClosenessValue">Select a rating</output>
+      <br>
+      <label>What do you hear being said?</label>
+      <input data-role="userInput" type="text" placeholder="Your answer">
+      <div data-role="misheardSection" hidden>
+        <p>The audio is misheard as <strong data-role="misheardText">a sample phrase</strong>.</p>
+        <label>How realistic is it for the audio to be misinterpreted like that?</label>
+        <input data-role="misinterpretationLikelihood" type="range" min="1" max="10" step="1">
+        <output data-role="misinterpretationLikelihoodValue">Select a rating</output>
+        <div data-role="originalAudioSection" hidden>
+          <p>The actual text of the audio is <strong data-role="originalAudioText">a sample original phrase</strong>.</p>
+          <label>How realistic is the original audio given that this is the text being said?</label>
+          <input data-role="originalAudioRealism" type="range" min="1" max="10" step="1">
+          <output data-role="originalAudioRealismValue">Select a rating</output>
+        </div>
+      </div>
+      <button data-role="submit" type="button" disabled>Submit</button>
+    </div>
+    <div class="surveyControls">
+      <button data-role="skip" type="button">Skip</button>
+      <button data-role="reset" type="button">Reset</button>
+    </div>
+    <div class="finishedMessage" data-role="finishedMessage" hidden>
+      <h2>All audios finished. Thank you for participating!</h2>
+    </div>
+  </section>
 
-  <div>
-    <input id="userInput" type="text" placeholder="Your answer">
-    <button id="submitBtn">Submit</button>
-  </div>
-
-  <div id="finishedMessage" style="display:none; margin-top:20px;">
-    <h2>All audios finished. Thank you for participating!</h2>
-  </div>
+  <section id="dirtyAudioPanel" class="surveyPanel" role="tabpanel" aria-labelledby="dirtyAudioTab" hidden>
+    <div class="status" data-role="status">Audio 0 of 0</div>
+    <audio class="player" data-role="player" controls></audio>
+    <div class="surveyInputs" data-role="surveyInputs">
+      <fieldset>
+        <legend>I believe that this audio was created by:</legend>
+        <label><input type="checkbox" data-role="source" value="Text To Speech"> Text To Speech</label>
+        <label><input type="checkbox" data-role="source" value="A real human"> A real human</label>
+      </fieldset>
+      <label>How close does this sound to a human?</label>
+      <input data-role="humanCloseness" type="range" min="1" max="10" step="1">
+      <output data-role="humanClosenessValue">Select a rating</output>
+      <br>
+      <label>What do you hear being said?</label>
+      <input data-role="userInput" type="text" placeholder="Your answer">
+      <div data-role="misheardSection" hidden>
+        <p>The audio is misheard as <strong data-role="misheardText">a sample phrase</strong>.</p>
+        <label>How realistic is it for the audio to be misinterpreted like that?</label>
+        <input data-role="misinterpretationLikelihood" type="range" min="1" max="10" step="1">
+        <output data-role="misinterpretationLikelihoodValue">Select a rating</output>
+        <div data-role="originalAudioSection" hidden>
+          <p>The actual text of the audio is <strong data-role="originalAudioText">a sample original phrase</strong>.</p>
+          <label>How realistic is the original audio given that this is the text being said?</label>
+          <input data-role="originalAudioRealism" type="range" min="1" max="10" step="1">
+          <output data-role="originalAudioRealismValue">Select a rating</output>
+        </div>
+      </div>
+      <button data-role="submit" type="button" disabled>Submit</button>
+    </div>
+    <div class="surveyControls">
+      <button data-role="skip" type="button">Skip</button>
+      <button data-role="reset" type="button">Reset</button>
+    </div>
+    <div class="finishedMessage" data-role="finishedMessage" hidden>
+      <h2>All audios finished. Thank you for participating!</h2>
+    </div>
+  </section>
 
   <a href="index_audio_survey.html">Go back to the Main Page</a>
 

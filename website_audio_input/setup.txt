@@ -12,14 +12,14 @@ To setup the Audio Input Website as localhost, follow these steps:
    Keep it running while submitting the audio!
 7. Rightclick on index_audio_input.html and click on "Open with Live Server". This should open the website in a browser.
 
-On the index page, you will be asked to enter your name before you can proceed to the Input link.
+On the index page, you will be asked to enter some data before you can proceed to the Input link.
 
 After submitting the audios (given the presumed size of the survey, 15-20 rows for persons and books each should be plenty),
 please check if the following are in the folder:
 
-1. An "audio_upload"-directory with the .opus soundfiles, 9 per completed page
+1. An "audio_upload"-directory with the .opus soundfiles, 11 per completed page
 2. audio_metadata.csv containing a row per soundfile (+ 1 row for the header)
-3. participant_names.jsonl containing the name you gave
+3. participant_data.jsonl containing the data you gave on the first page
 
 These are also the files that I then need back.
 Thanks for inputting audio!

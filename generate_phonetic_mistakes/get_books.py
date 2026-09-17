@@ -1,7 +1,11 @@
 import requests
 import csv
 import time
+import re
 
+# ---------------------------------------------------------
+# 1. OCLC Library 100 Titles (FULL LIST INCLUDED)
+# ---------------------------------------------------------
 oclc_titles = [
     "Don Quixote",
     "Alice's Adventures in Wonderland",
@@ -133,7 +137,22 @@ def find_work_key(title):
     return docs[0].get("key")
 
 # ---------------------------------------------------------
-# 4. Fetch COMPLETE edition metadata
+# 4. Extract clean year
+# ---------------------------------------------------------
+def extract_year(date_string):
+    """Extract a clean 4-digit year. Accepts 'Dec 14, 2010', rejects '199u'."""
+    if not date_string:
+        return None
+
+    # Find any clean 4-digit year
+    match = re.search(r"\b(19|20)\d{2}\b", date_string)
+    if match:
+        return match.group(0)
+
+    return None  # reject fuzzy years
+
+# ---------------------------------------------------------
+# 5. Fetch COMPLETE edition metadata
 # ---------------------------------------------------------
 def fetch_complete_edition(work_key):
     url = f"https://openlibrary.org{work_key}/editions.json"
@@ -155,7 +174,7 @@ def fetch_complete_edition(work_key):
             isbn = isbn10[0]
 
         publisher = ed.get("publishers", [""])[0] if ed.get("publishers") else ""
-        publish_year = ed.get("publish_date", "")
+        publish_year = extract_year(ed.get("publish_date", ""))
 
         # Accept only complete rows
         if isbn and publisher and publish_year:
@@ -168,7 +187,7 @@ def fetch_complete_edition(work_key):
     return None
 
 # ---------------------------------------------------------
-# 5. Write CSV
+# 6. Write CSV
 # ---------------------------------------------------------
 with open("oclc_library_100.csv", "w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)

@@ -8,7 +8,7 @@ import os
 from audiolib import norm_audio, audioread, audiowrite, snr_mixer, match_samplerate
 import librosa
 
-def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper=40.0, total_snrlevels=5, clean_dir=None, noise_dir=None, sampling_rate=16000, audioformat='*.wav', silence_length=0.2, write_processed_files=True, noisyspeech_dir=None, clean_proc_dir=None, noise_proc_dir=None, noise_types_excluded=None):
+def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper=40.0, total_snrlevels=5, clean_dir=None, noise_dir=None, sampling_rate=16000, audioformat='*.wav', silence_length=0.2, write_processed_files=True, noisyspeech_dir=None, clean_proc_dir=None, noise_proc_dir=None, noise_types_excluded=None, return_filenames=False):
     """
     Description:
         Generate noisy speech examples by mixing clean speech with environmental noise
@@ -86,6 +86,7 @@ def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper
     noisy_speech = []
     clean_speech = []
     noise_proc = []
+    noisy_filenames = []
 
     for idx_s in range(num_wavs):
         if audios is None:
@@ -126,12 +127,17 @@ def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper
                 audiowrite(noisy_snr, fs, noisypath, norm=False)
                 audiowrite(clean_snr, fs, cleanpath, norm=False)
                 audiowrite(noise_snr, fs, noisepath, norm=False)
+                noisy_filenames.append(noisypath)
+            elif return_filenames:
+                noisy_filenames.append(None)
             noisy_speech.append(noisy_snr)
             clean_speech.append(clean_snr)
             noise_proc.append(noise_snr)
             num_samples = num_samples + len(noisy_snr)
             print("Generated file {} with SNR {} dB. Noisy files generated: {} of {}".format(i, SNR[i], (filecounter-1) * total_snrlevels + i + 1, num_wavs * total_snrlevels))
         
+    if return_filenames:
+        return noisy_speech, clean_speech, noise_proc, noisy_filenames
     return noisy_speech, clean_speech, noise_proc
             
     

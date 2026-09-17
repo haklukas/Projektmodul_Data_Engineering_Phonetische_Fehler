@@ -3,7 +3,8 @@ from pathlib import Path
 import soundfile as sf
 import numpy as np
 import random
-from audiolib import modify_audio, add_interruptions, audioread, audiowrite
+from audiolib import modify_audio, add_interruptions, audioread, audiowrite, match_samplerate
+from audio_embedding import compare_audio_embeddings
 from noisyspeech_synthesizer import *
 import Levenshtein
 import phonetics
@@ -18,9 +19,75 @@ from textclass_params import Textclasses, PARAMS
 from tts import tts_single
 from stt import stt
 
-def evaluate_phonetic_mistakes(text, noisy_text, language):
+def evaluate_phonetic_mistake(clean_audio, text, noisy_text, language, voice, tts_name="Piper", clean_audio_sr=16000, audio_id=0, save_audio=False):
+
+    # eliminate punctuation and convert numbers to words
+    translator = str.maketrans('', '', string.punctuation)
+    text = text.translate(translator)
+    if language == "english":
+        text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group())), text)
+    elif language == "german":
+        text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group()), lang= "de"), text)
+        
+    text = text.translate(translator)
+    text = text.strip()
+
+    noisy_text = noisy_text.translate(translator)
+    if language == "english":
+        noisy_text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group())), noisy_text)
+    elif language == "german":
+        noisy_text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group()), lang= "de"), noisy_text)
+
+    noisy_text = noisy_text.translate(translator)
+    noisy_text = noisy_text.strip()
+
+    # eliminate candidates that are exactly the same as the original text
+    if not noisy_text or noisy_text == text:
+        if not noisy_text:
+            print(f"Skipping evaluation {audio_id}: noisy transcription is empty after normalization.")
+        return -1
+
+    # get audio from the noisy text using the same voice and TTS configuration
+    if isinstance(voice, tuple):
+        voice_configuration = [(voice[0], None if voice[1] is None else [voice[1]])]
+    else:
+        voice_configuration = voice
+    noisy_audio_data, noisy_audio_sr = tts_single(noisy_text, voice_configuration, tts_name)
+    noisy_audio = noisy_audio_data[0][0]
+
+    audio_tests_dir = Path("Audio_Tests")
+    audio_tests_dir.mkdir(parents=True, exist_ok=True)
+    if save_audio:
+        clean_audio_path = audio_tests_dir / f"clean_audio_{audio_id}.wav"
+        noisy_audio_path = audio_tests_dir / f"noisy_audio_{audio_id}.wav"
+        audiowrite(clean_audio, clean_audio_sr, clean_audio_path)
+        audiowrite(noisy_audio, noisy_audio_sr, noisy_audio_path)
+
+        print("--------------------------------------------------")
+        print(f"Phonetic evaluation {audio_id}")
+        print(f"Original text: {text}")
+        print(f"Noisy text: {noisy_text}")
+        print(f"Language: {language}")
+        print(f"Voice: {voice}")
+        print(f"TTS: {tts_name}")
+        print(f"Clean audio: {clean_audio_path}")
+        print(f"Noisy audio: {noisy_audio_path}")
+        print(f"Clean sample rate: {clean_audio_sr}")
+        print(f"Noisy sample rate: {noisy_audio_sr}")
+
+    #create audio embeddings for the clean and noisy audio and get the cosine similarity
+    clean_audio_16k = match_samplerate(clean_audio, clean_audio_sr, 16000)
+    noisy_audio_16k = match_samplerate(noisy_audio, noisy_audio_sr, 16000)
+    eval = compare_audio_embeddings(clean_audio_16k, noisy_audio_16k, embedding="whisper")
+
+    if save_audio:
+        print(f"Whisper cosine similarity: {eval}")
+
+    return eval
+
+'''def evaluate_phonetic_mistakes(text, noisy_text, language):
     """
-    Description:
+    """Description:
         Evaluate phonetic and edit-distance differences between original and noisy transcriptions.
 
     Args:
@@ -35,15 +102,15 @@ def evaluate_phonetic_mistakes(text, noisy_text, language):
     translator = str.maketrans('', '', string.punctuation)
     text = text.translate(translator)
     if language == "english":
-        text = re.sub(r"\d+", lambda m: num2words(int(m.group())), str.replace(text, ))
+        text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group())), text)
     elif language == "german":
-        text = re.sub(r"\d+", lambda m: num2words(int(m.group()), lang= "de"), text)
+        text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group()), lang= "de"), text)
     
     noisy_text = noisy_text.translate(translator)
     if language == "english":
-        noisy_text = re.sub(r"\d+", lambda m: num2words(int(m.group())), noisy_text)
+        noisy_text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group())), noisy_text)
     elif language == "german":
-        noisy_text = re.sub(r"\d+", lambda m: num2words(int(m.group()), lang= "de"), noisy_text)
+        noisy_text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group()), lang= "de"), noisy_text)
 
     eval = dict()
 
@@ -149,9 +216,9 @@ def evaluate_phonetic_mistakes(text, noisy_text, language):
     print(f"Noisy text encoded by Double Metaphone: {dmetaphone_noisy_text}")
     print("--------------------------------------------------")
     
-    return eval
+    return eval'''
 
-def normalize_metrics(metrics_list):
+"""def normalize_metrics(metrics_list):
     norm_metrics_list = []
     min_metrics = dict()
     max_metrics = dict()
@@ -187,9 +254,9 @@ def normalize_metrics(metrics_list):
 
     print(norm_metrics_list)
 
-    return norm_metrics_list
+    return norm_metrics_list"""
 
-def pick_mistake(text, noisy_texts, language, severity):
+"""def pick_mistake(text, noisy_texts, language, severity):
     metrics_list = []
     noisy_texts = [noisy_text for noisy_text in noisy_texts if noisy_text != text]
     for noisy_text in noisy_texts:
@@ -209,9 +276,9 @@ def pick_mistake(text, noisy_texts, language, severity):
     else:
         mistake = random.choice(candidates)
     print(mistake)
-    return mistake[0]
+    return mistake[0]"""
 
-def is_similar_sounding(text, noisy_text, language):
+"""def is_similar_sounding(text, noisy_text, language):
 
     eval = evaluate_phonetic_mistakes(text, noisy_text, language)
 
@@ -229,12 +296,11 @@ def is_similar_sounding(text, noisy_text, language):
             print(f"{text} is similar to {noisy_text} by algorithm {algo} : {values[0]} = {values[1]}")
             print("####################################################")
 
-    return is_similar_sounding
+    return is_similar_sounding"""
 
 
-def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voices, severity, tts_name="Piper", stt_name="Whisper_turbo"):
-    """
-    Description:
+def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voices, tts_name="Piper", stt_name="Whisper_turbo", return_filenames=False):
+    """Description:
         Synthesize audio, apply transformations and noise layers, run STT, and evaluate phonetic mistakes.
 
     Args:
@@ -261,6 +327,7 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
 
     modified_audios = []
     modified_audio_metadata = []
+    modified_audio_sources = []
     for i in range(len(audios)):
         audio = audios[i]
         for vol in params["volumes"]:
@@ -268,10 +335,12 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
                 modified_audio = modify_audio(audio, volume_factor=vol, speed_factor=spd)
                 modified_audios.append(modified_audio)
                 modified_audio_metadata.append(audio_metadata[i])
+                modified_audio_sources.append((audio, orig_sr, audio_metadata[i]))
                 if params["num_interrupts"] > 0:
                     modified_audio_interrupted = add_interruptions(modified_audio, orig_sr, interruption_length=params["len_interrupts"], num_interruptions=params["num_interrupts"])
                     modified_audios.append(modified_audio_interrupted)
                     modified_audio_metadata.append(audio_metadata[i])
+                    modified_audio_sources.append((audio, orig_sr, audio_metadata[i]))
 
     for i in range(len(modified_audios)):
         audiowrite(modified_audios[i], orig_sr, os.path.join("clean", f"modified_audio_{i}.wav"))
@@ -281,43 +350,79 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
     audios = modified_audios
 
     noisy_speech_metadata = []
+    noisy_speech_sources = []
     print(f"orig_sr: {orig_sr}")
     if params["noise_layers"] > 0:
             
         noisy_speech_all = []
+        noisy_speech_all_sources = []
+        noisy_speech_all_filenames = []
         step = 0
         sr = 16000
         for i in range(params["noise_layers"]):
             step += 1
+            layer_output_dir = os.path.join("NoisySpeech_After", f"layer_{step}")
             if step == 1:
-                noisy_speech, clean_speech, noise = synthesize_noisy_speech(audios = audios, orig_sr=orig_sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], write_processed_files = True, sampling_rate=sr)
+                synthesis_result = synthesize_noisy_speech(audios = audios, orig_sr=orig_sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], write_processed_files = True, sampling_rate=sr, noisyspeech_dir=layer_output_dir, return_filenames=return_filenames)
             else:
-                noisy_speech, clean_speech, noise = synthesize_noisy_speech(audios = audios, orig_sr=sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], write_processed_files = True, sampling_rate=sr)
+                synthesis_result = synthesize_noisy_speech(audios = audios, orig_sr=sr, snr_lower=params["snr_lower"], snr_upper=params["snr_upper"], total_snrlevels=params["total_snrlevels"], write_processed_files = True, sampling_rate=sr, noisyspeech_dir=layer_output_dir, return_filenames=return_filenames)
+            if return_filenames:
+                noisy_speech, clean_speech, noise, layer_filenames = synthesis_result
+                noisy_speech_all_filenames.extend(layer_filenames)
+            else:
+                noisy_speech, clean_speech, noise = synthesis_result
             noisy_speech_all.extend(noisy_speech)
             print("##########################################")
             print(f"Number of new noisy speech versions after layer {step}: {len(audios)}")
             noisy_versions_per_clean_audio = len(noisy_speech) // len(audios)
             print(f"Number of noisy versions per clean audio: {noisy_versions_per_clean_audio}")
             print(len(noisy_speech) / len(audios))
-            noisy_speech_metadata.extend([md for md in modified_audio_metadata for _ in range(noisy_versions_per_clean_audio)])
+            layer_metadata = [md for md in modified_audio_metadata for _ in range(noisy_versions_per_clean_audio)]
+            layer_sources = [source for source in modified_audio_sources for _ in range(noisy_versions_per_clean_audio)]
+            noisy_speech_metadata.extend(layer_metadata)
+            noisy_speech_sources = layer_sources
+            noisy_speech_all_sources.extend(layer_sources)
             print(len(noisy_speech_metadata))
             print("##########################################")
             audios = noisy_speech.copy()
             modified_audio_metadata = noisy_speech_metadata.copy()
+            modified_audio_sources = noisy_speech_sources.copy()
         
         noisy_texts = stt(noisy_speech_all, language=stt_language, stt_name=stt_name)
+        noisy_speech_sources = noisy_speech_all_sources
 
     else:
         noisy_texts = stt(audios, language=stt_language, stt_name=stt_name)
-        print("##########################################")
-        print(f"Number of new noisy speech versions after layer {step}: {len(audios)}")
-        noisy_versions_per_clean_audio = len(noisy_speech) // len(audios)
-        print(f"Number of noisy versions per clean audio: {noisy_versions_per_clean_audio}")
-        print(len(noisy_speech) / len(audios))
-        print("##########################################")
-        audios = noisy_speech
-        noisy_speech_metadata.extend([md for md in audio_metadata for _ in range(noisy_versions_per_clean_audio)])
+        noisy_speech_sources = modified_audio_sources
+        noisy_speech_all_filenames = [None] * len(noisy_texts)
 
+    evaluation_results = []
+    voice_audio_counts = {}
+    voice_ids = {}
+    for i, noisy_text in enumerate(noisy_texts):
+        clean_audio, clean_audio_sr, voice = noisy_speech_sources[i]
+        voice_key = repr(voice)
+        if voice_key not in voice_ids:
+            voice_ids[voice_key] = len(voice_ids)
+        voice_audio_id = voice_audio_counts.get(voice_key, 0)
+        voice_audio_counts[voice_key] = voice_audio_id + 1
+        evaluation_results.append(
+            (noisy_text,
+             noisy_speech_all_filenames[i] if return_filenames else None,
+                evaluate_phonetic_mistake(
+                    clean_audio=clean_audio,
+                    text=text,
+                    noisy_text=noisy_text,
+                    language=text_language,
+                    voice=voice,
+                    tts_name=tts_name,
+                    clean_audio_sr=clean_audio_sr,
+                    audio_id=f"voice_{voice_ids[voice_key]}_audio_{voice_audio_id}",
+                )
+            )
+        )
+
+    """
     evalspeech_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "EvalSpeech"))
 
     if os.path.exists(evalspeech_dir):
@@ -332,13 +437,48 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
         evalspeech_data, eval_sr = tts_single(text=noisy_text, voices=[(voice_pack_path, [speaker_id])], tts_name=tts_name)
         eval_audio = evalspeech_data[0][0]
         audiowrite(eval_audio, eval_sr, os.path.join(evalspeech_dir, f"eval_{i}.wav"))
-   
+    """
 
-    #mistake = pick_mistake(text, noisy_texts, text_language, severity)
-    #similar_sounding_texts = []
-    #for noisy_text in noisy_texts:
-    #    if is_similar_sounding(text=text, noisy_text=noisy_text, language=text_language):
-    #        similar_sounding_texts.append(noisy_text)
+    """
+    mistake = pick_mistake(text, noisy_texts, text_language, severity)
+    similar_sounding_texts = []
+    for noisy_text in noisy_texts:
+        if is_similar_sounding(text=text, noisy_text=noisy_text, language=text_language):
+            similar_sounding_texts.append(noisy_text)
 
-    #print(noisy_texts)
-    return 0
+    print(noisy_texts)"""
+
+    evaluation_results = [result for result in evaluation_results if result[2] != -1]
+    print(f"Number of valid evaluation results: {len(evaluation_results)}")
+    # sort evaluation results by similarity score descending (higher similarity means more similar sounding)
+    evaluation_results.sort(key=lambda x: x[2], reverse=True)
+    print(f"Sorted evaluation results: {evaluation_results}")
+
+    if return_filenames:
+        return [(result[0], result[1]) for result in evaluation_results]
+    return [result[0] for result in evaluation_results]
+
+def get_phonetic_mistake_single(text, textclass, text_language, stt_language, voices, severity, tts_name="Piper", stt_name="Whisper_turbo", return_filename=False):
+    results = generate_phonetic_mistakes(text=text, textclass=textclass, text_language=text_language, stt_language=stt_language, voices=voices, tts_name=tts_name, stt_name=stt_name, return_filenames=return_filename)
+    if len(results) == 0:
+        print("No valid evaluation results found.")
+        return None
+    # choose the result corresponding to the desired severity level (1-10)
+    # The results are divided into 10 equal parts and a random result is selected from the part corresponding to the severity level.
+    split_results = np.array_split(np.array(results), 10)
+    selected_results = split_results[severity - 1] if severity <= len(split_results) else split_results[-1]
+    selected_result = random.choice(selected_results)
+    print(f"Selected result for severity {severity}: {selected_result}")
+    return selected_result
+
+def get_phonetic_mistake_block(text, textclass, text_language, stt_language, voices, severity, tts_name="Piper", stt_name="Whisper_turbo"):
+    results = generate_phonetic_mistakes(text=text, textclass=textclass, text_language=text_language, stt_language=stt_language, voices=voices, tts_name=tts_name, stt_name=stt_name)
+    if len(results) == 0:
+        print("No valid evaluation results found.")
+        return None
+    # choose the result corresponding to the desired severity level (1-10)
+    # The results are divided into 10 equal parts and a random result is selected from the part corresponding to the severity level.
+    split_results = np.array_split(np.array(results), 10)
+    selected_results = split_results[severity - 1] if severity <= len(split_results) else split_results[-1]
+    print(f"Selected results for severity {severity}: {selected_results}")
+    return selected_results

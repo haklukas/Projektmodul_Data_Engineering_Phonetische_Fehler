@@ -76,6 +76,10 @@ function renderRow() {
     const row = dataset.rows[currentRowIndex];
     return `<section class="datasetSection">
       <h3>${dataset.label}</h3>
+      <div class="rowNoiseControl">
+        <label for="rowBackgroundNoise-${dataset.key}">Background Noise for Row:</label>
+        <input id="rowBackgroundNoise-${dataset.key}" class="rowBackgroundNoiseInput" type="text" value="None">
+      </div>
       <div class="tableScroll" role="region" aria-label="${dataset.label} fields" tabindex="0">
         <table class="fieldTable">
           <thead><tr>${dataset.headers.map(field => `<th scope="col">${field}</th>`).join('')}</tr></thead>
@@ -88,7 +92,7 @@ function renderRow() {
         <td>
           <p class="fieldText">${value}</p>
           <label class="backgroundNoiseLabel" for="backgroundNoise-${recordingKey}">Background Noise:</label>
-          <input id="backgroundNoise-${recordingKey}" class="backgroundNoiseInput" type="text" placeholder="None">
+          <input id="backgroundNoise-${recordingKey}" class="backgroundNoiseInput" type="text" value="None">
           <button class="recordFieldButton" data-recording-key="${recordingKey}" data-field="${field}" data-row-label="${dataset.label}">Record</button>
           <audio class="fieldAudio" data-recording-key="${recordingKey}" controls hidden></audio>
           <span class="fieldStatus" data-recording-key="${recordingKey}"></span>
@@ -99,6 +103,15 @@ function renderRow() {
     </section>`;
   }).join('');
   datasetTables.dataset.recordingKeys = JSON.stringify(recordingKeys);
+
+  document.querySelectorAll('.datasetSection').forEach(section => {
+    const rowNoiseInput = section.querySelector('.rowBackgroundNoiseInput');
+    rowNoiseInput.addEventListener('input', event => {
+      section.querySelectorAll('.backgroundNoiseInput').forEach(input => {
+        input.value = event.target.value;
+      });
+    });
+  });
 
   document.querySelectorAll('.recordFieldButton').forEach(button => {
     button.addEventListener('click', () => recordField(

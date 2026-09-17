@@ -441,5 +441,13 @@ MS-SNSD*
 [Nn]otiz*
 noisyspeech_synthesizer.cfg
 ncvoter_*.txt
+[Ii]nput*/
+[Aa]udio_Tests/
+**/audio_*/audios/
+survey_audio_noisy/
+**/*einwilligung*
+*.pptx
+*.docx
 
+*.opus
 *.onnx

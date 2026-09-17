@@ -37,11 +37,6 @@ df["ZipCode"] = df["zip_code"].str.strip()
 
 print("ZipCode column processed successfully.")
 
-# --- PHONE ---
-df["Phone"] = df["full_phone_number"].str.strip()
-
-print("Phone column processed successfully.")
-
 # --- BIRTH YEAR ---
 df["BirthYear"] = df["birth_year"].astype(str).str.strip()
 
@@ -56,7 +51,7 @@ df = df.replace({"": pd.NA, " ": pd.NA, "nan": pd.NA})
 
 
 # --- FINAL SUBSET ---
-subset = df[["Name", "County", "City", "ZipCode", "Phone", "BirthYear", "Age"]].dropna()
+subset = df[["Name", "County", "City", "ZipCode", "BirthYear", "Age"]].dropna()
 
 subset = subset.drop_duplicates(subset=["City"])
 

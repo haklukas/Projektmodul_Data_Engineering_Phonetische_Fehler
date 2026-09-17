@@ -2,6 +2,21 @@ body {
   font-family: sans-serif;
   margin: 40px;
 }
+.surveyTabs {
+  display: flex;
+  gap: 4px;
+  margin: 20px 0 12px;
+}
+.surveyTabs button[aria-selected="true"] {
+  font-weight: bold;
+}
+.surveyPanel[hidden] {
+  display: none;
+}
+.surveyPanel .status {
+  margin-bottom: 10px;
+  font-weight: bold;
+}
 input {
   margin-right: 10px;
 }

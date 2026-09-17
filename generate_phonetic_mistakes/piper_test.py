@@ -1,7 +1,8 @@
 from pathlib import Path
 import os
 from textclass_params import Textclasses, PARAMS
-from generate_phonetic_mistakes import generate_phonetic_mistakes
+from generate_phonetic_mistakes import generate_phonetic_mistakes, get_phonetic_mistake_block, get_phonetic_mistake_single
+
 
 SKIP_STT = False
 TEST_CASE  = True
@@ -30,8 +31,6 @@ if __name__ == "__main__":
     #text = "Maria Sklodowska-Curie"
     #text = "seventeen thousand five hundred and fifty five"
     #textclass = Textclasses.NAME
-    #textclass = Textclasses.COUNTRY
-    #textclass = Textclasses.COMPANY
     textclass = Textclasses.NUMBER
     #textclass = Textclasses.NATURAL_TEXT
     
@@ -66,5 +65,5 @@ if __name__ == "__main__":
         "total_snrlevels": 2
     }
 
-    results = generate_phonetic_mistakes(text, textclass, text_language, stt_language, voices, severity=3, stt_name="Whisper_tiny_en")
+    results = get_phonetic_mistake_single(text, textclass, text_language, stt_language, voices, severity=1, stt_name="Whisper_tiny_en")
     print(results)

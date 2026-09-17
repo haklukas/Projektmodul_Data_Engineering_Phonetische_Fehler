@@ -4,7 +4,7 @@ const multer = require("multer");
 const upload = multer({ dest: "audio_upload/" });
 const fs = require("fs");
 const path = require("path");
-const namesFile = path.join(__dirname, "participant_names.jsonl");
+const participantFile = path.join(__dirname, "participant_data.jsonl");
 const metadataFile = path.join(__dirname, "audio_metadata.csv");
 const audioDirectory = path.join(__dirname, "audio_upload");
 let audioSaveQueue = Promise.resolve();
@@ -21,20 +21,31 @@ function sanitize(str) {
 app.post("/user_name", (req, res) => {
   const name = String(req.body.name || "").trim();
   const userId = String(req.body.userId || "").trim();
+  const nativeLanguage = String(req.body.nativeLanguage || "").trim();
+  const countryOfOrigin = String(req.body.countryOfOrigin || "").trim();
+  const age = String(req.body.age || "").trim();
+  const englishKnowledge = String(req.body.englishKnowledge || "").trim();
 
   if (!name) return res.status(400).json({ error: "Name is required" });
   if (!userId) return res.status(400).json({ error: "User ID is required" });
+  if (!nativeLanguage || !countryOfOrigin || !age || !englishKnowledge) {
+    return res.status(400).json({ error: "All participant details are required" });
+  }
 
   const entry = JSON.stringify({
     userId,
     name,
+    nativeLanguage,
+    countryOfOrigin,
+    age,
+    englishKnowledge,
     submittedAt: new Date().toISOString()
   });
 
-  fs.appendFile(namesFile, `${entry}\n`, error => {
+  fs.appendFile(participantFile, `${entry}\n`, error => {
     if (error) {
       console.error(error);
-      return res.status(500).json({ error: "Name could not be saved" });
+      return res.status(500).json({ error: "Participant data could not be saved" });
     }
     res.json({ status: "ok" });
   });

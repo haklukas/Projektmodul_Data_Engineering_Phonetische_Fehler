@@ -10,9 +10,25 @@
   <h1>Audio Survey for the Project <br>"Implementing Phonetic Mistakes with a TTS-STT-Pipeline"</h1>
   <p>Hello and thank you for helping with this project!</p>
   <form id="nameForm">
-    <label for="participantName">Your name:</label>
-    <input id="participantName" name="participantName" type="text" required maxlength="100" autocomplete="name">
-    <button id="nameSubmit" type="submit" disabled>Submit name</button>
+    <div class="participantDetails">
+      <label for="nativeLanguage">Native language:</label>
+      <input id="nativeLanguage" name="nativeLanguage" type="text" required maxlength="100" autocomplete="language">
+      <label for="countryOfOrigin">Country of Origin:</label>
+      <input id="countryOfOrigin" name="countryOfOrigin" type="text" required maxlength="100" autocomplete="country-name">
+      <label for="participantAge">Age:</label>
+      <input id="participantAge" name="participantAge" type="number" required min="1" max="120" inputmode="numeric">
+      <label for="englishKnowledge">Knowledge of English:</label>
+      <select id="englishKnowledge" name="englishKnowledge" required>
+        <option value="" selected disabled>Select CEFR level</option>
+        <option value="A1">A1: Beginner</option>
+        <option value="A2">A2: Elementary</option>
+        <option value="B1">B1: Intermediate</option>
+        <option value="B2">B2: Upper Intermediate</option>
+        <option value="C1">C1: Advanced</option>
+        <option value="C2">C2: Proficient</option>
+      </select>
+    </div>
+    <button id="nameSubmit" type="submit" disabled>Submit</button>
     <p id="nameStatus" role="status" aria-live="polite"></p>
   </form>
   <p>Here you can participate in an <a id="activityLink" href="audio_survey.html" aria-disabled="true">audio survey</a> where you will listen to audio samples that are either spoken by real people or by a Text-to-Speech software
@@ -20,7 +36,7 @@
     You can answer as many questions as you want and can continue in a new session at any point. 
   </p>
 
-  <script src="index.js"></script>
+  <script src="index.js?v=1"></script>
 
 </body>
 </html>

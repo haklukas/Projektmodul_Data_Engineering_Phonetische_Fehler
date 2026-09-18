@@ -48,7 +48,7 @@ def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper
     if not os.path.exists(noise_dir):
         assert False, ("Noise data is required")
         
-    fs = float(sampling_rate)
+    output_sr = int(sampling_rate)
     if write_processed_files:
         if noisyspeech_dir is None:
             noisyspeech_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "NoisySpeech_After"))
@@ -90,15 +90,28 @@ def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper
 
     for idx_s in range(num_wavs):
         if audios is None:
-            clean, orig_sr = audioread(cleanfilenames[idx_s])
+            clean, clean_sr = audioread(cleanfilenames[idx_s])
         else:
             clean = norm_audio(audios[idx_s])
+            clean_sr = orig_sr
 
-        if orig_sr != sampling_rate:
-            clean = match_samplerate(clean, orig_sr, sampling_rate)
+        clean_input_sr = int(clean_sr)
+        if clean_input_sr != output_sr:
+            clean = match_samplerate(clean, clean_input_sr, output_sr)
+        print(
+            f"Clean audio {idx_s}: input_sr={clean_input_sr}, output_sr={output_sr}, "
+            f"samples={len(clean)}, duration={len(clean) / output_sr:.3f}s"
+        )
 
         idx_n = np.random.randint(0, np.size(noisefilenames))
-        noise, fs = audioread(noisefilenames[idx_n])
+        noise, noise_sr = audioread(noisefilenames[idx_n])
+        noise_input_sr = int(noise_sr)
+        if noise_input_sr != output_sr:
+            noise = match_samplerate(noise, noise_input_sr, output_sr)
+        print(
+            f"Noise audio: input_sr={noise_input_sr}, output_sr={output_sr}, "
+            f"samples={len(noise)}, duration={len(noise) / output_sr:.3f}s"
+        )
         
         if len(noise)>=len(clean):
             noise = noise[0:len(clean)]
@@ -109,8 +122,11 @@ def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper
                 idx_n = idx_n + 1
                 if idx_n >= np.size(noisefilenames)-1:
                     idx_n = np.random.randint(0, np.size(noisefilenames))
-                newnoise, fs = audioread(noisefilenames[idx_n])
-                noiseconcat = np.append(noise, np.zeros(int(fs*silence_length)))
+                newnoise, new_noise_sr = audioread(noisefilenames[idx_n])
+                new_noise_input_sr = int(new_noise_sr)
+                if new_noise_input_sr != output_sr:
+                    newnoise = match_samplerate(newnoise, new_noise_input_sr, output_sr)
+                noiseconcat = np.append(noise, np.zeros(int(output_sr * silence_length)))
                 noise = np.append(noiseconcat, newnoise)
         noise = noise[0:len(clean)]
         filecounter = filecounter + 1
@@ -124,9 +140,9 @@ def synthesize_noisy_speech(audios=None, orig_sr=16000, snr_lower=0.0, snr_upper
                 noisypath = os.path.join(noisyspeech_dir, noisyfilename)
                 cleanpath = os.path.join(clean_proc_dir, cleanfilename)
                 noisepath = os.path.join(noise_proc_dir, noisefilename)
-                audiowrite(noisy_snr, fs, noisypath, norm=False)
-                audiowrite(clean_snr, fs, cleanpath, norm=False)
-                audiowrite(noise_snr, fs, noisepath, norm=False)
+                audiowrite(noisy_snr, output_sr, noisypath, norm=False)
+                audiowrite(clean_snr, output_sr, cleanpath, norm=False)
+                audiowrite(noise_snr, output_sr, noisepath, norm=False)
                 noisy_filenames.append(noisypath)
             elif return_filenames:
                 noisy_filenames.append(None)

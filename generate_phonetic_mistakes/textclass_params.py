@@ -23,7 +23,8 @@ PARAMS = {
     Textclasses.NUMBER: {
         "noise_layers": 2,
         "volumes": [0.8, 1.0],
-        "speeds": [0.8, 1.0, 1.3],
+        #"speeds": [1.0],
+        "speeds": [1.0, 1.3],
         "num_interrupts": 1,
         "len_interrupts": 0.1,
         "snr_lower": 20.0,
@@ -34,6 +35,7 @@ PARAMS = {
     Textclasses.NAME: {
         "noise_layers": 1,
         "volumes": [0.9, 1.0],
+        #"speeds": [1.0],
         "speeds": [0.9, 1.0, 1.2],
         "num_interrupts": 1,
         "len_interrupts": 0.1,
@@ -44,10 +46,10 @@ PARAMS = {
     },
 
     Textclasses.NATURAL_TEXT: {
-        "noise_layers": 2,
+        "noise_layers": 1,
         "volumes": [1.0],
-        "speeds": [1.0],
-        "num_interrupts": 3,
+        "speeds": [1.0, 1.2],
+        "num_interrupts": 2,
         "len_interrupts": 0.2,
         "snr_lower": 10.0,
         "snr_upper": 20.0,

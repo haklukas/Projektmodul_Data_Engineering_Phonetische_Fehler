@@ -1,5 +1,6 @@
 
 from pathlib import Path
+import wave
 import soundfile as sf
 import numpy as np
 import random
@@ -52,7 +53,18 @@ def evaluate_phonetic_mistake(clean_audio, text, noisy_text, language, voice, tt
         voice_configuration = [(voice[0], None if voice[1] is None else [voice[1]])]
     else:
         voice_configuration = voice
-    noisy_audio_data, noisy_audio_sr = tts_single(noisy_text, voice_configuration, tts_name)
+    try:
+        noisy_audio_data, noisy_audio_sr = tts_single(noisy_text, voice_configuration, tts_name)
+    except wave.Error as error:
+        print(
+            f"Skipping evaluation {audio_id}: Piper could not synthesize "
+            f"the noisy text {noisy_text!r} with voice {voice!r}: {error}"
+        )
+        return -1
+
+    if not noisy_audio_data:
+        print(f"Skipping evaluation {audio_id}: Piper returned no audio data.")
+        return -1
     noisy_audio = noisy_audio_data[0][0]
 
     audio_tests_dir = Path("Audio_Tests")
@@ -394,7 +406,10 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
     else:
         noisy_texts = stt(audios, language=stt_language, stt_name=stt_name)
         noisy_speech_sources = modified_audio_sources
-        noisy_speech_all_filenames = [None] * len(noisy_texts)
+        noisy_speech_all_filenames = [
+            os.path.join("clean", f"modified_audio_{i}.wav")
+            for i in range(len(noisy_texts))
+        ]
 
     evaluation_results = []
     voice_audio_counts = {}
@@ -442,7 +457,8 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
     """
     mistake = pick_mistake(text, noisy_texts, text_language, severity)
     similar_sounding_texts = []
-    for noisy_text in noisy_texts:
+    for noisy_text 
+    in noisy_texts:
         if is_similar_sounding(text=text, noisy_text=noisy_text, language=text_language):
             similar_sounding_texts.append(noisy_text)
 

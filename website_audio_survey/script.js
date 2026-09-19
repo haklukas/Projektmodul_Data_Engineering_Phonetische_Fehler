@@ -1,3 +1,14 @@
+function getUserId() {
+  let userId = localStorage.getItem("userId");
+  if (!userId) {
+    userId = crypto.randomUUID();
+    localStorage.setItem("userId", userId);
+  }
+  return userId;
+}
+
+const userId = getUserId();
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -32,11 +43,14 @@ class SurveyTab {
   constructor(panel, tabName, audioItems) {
     this.panel = panel;
     this.tabName = tabName;
-    this.randomized = shuffle([...audioItems]);
+    this.storageKey = `surveyProgress:v2:${tabName}`;
+    const savedProgress = this.loadProgress();
+    this.randomized = savedProgress?.randomized || shuffle([...audioItems]);
     this.results = [];
-    this.index = 0;
+    this.index = savedProgress?.index || 0;
     this.currentFile = null;
     this.currentAudioText = "";
+    this.currentMisheardText = "";
     this.uploadGeneration = 0;
     this.status = panel.querySelector('[data-role="status"]');
     this.player = panel.querySelector('[data-role="player"]');
@@ -59,6 +73,23 @@ class SurveyTab {
     this.finishedMessage = panel.querySelector('[data-role="finishedMessage"]');
     this.attachListeners();
     this.nextSound();
+  }
+
+  loadProgress() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(this.storageKey) || "null");
+      if (!saved || !Array.isArray(saved.randomized) || !Number.isInteger(saved.index)) return null;
+      return saved;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  saveProgress() {
+    sessionStorage.setItem(this.storageKey, JSON.stringify({
+      randomized: this.randomized,
+      index: this.index
+    }));
   }
 
   attachListeners() {
@@ -91,6 +122,7 @@ class SurveyTab {
     this.submitButton.addEventListener("click", () => this.submitCurrent());
     this.skipButton.addEventListener("click", () => {
       this.clearCurrentInputs();
+      this.saveProgress();
       this.nextSound();
     });
     this.resetButton.addEventListener("click", () => this.reset());
@@ -125,9 +157,11 @@ class SurveyTab {
     const currentAudio = this.randomized[this.index];
     this.currentFile = currentAudio.file;
     this.currentAudioText = currentAudio.text;
+    this.currentMisheardText = currentAudio.misheardText || "a sample phrase";
     this.index++;
     this.player.src = this.currentFile;
     this.originalAudioText.textContent = this.currentAudioText;
+    this.misheardText.textContent = this.currentMisheardText;
   }
 
   clearCurrentInputs() {
@@ -144,19 +178,33 @@ class SurveyTab {
     this.updateFormState();
   }
 
-  submitCurrent() {
-    this.results.push({
+  async submitCurrent() {
+    const result = {
       tab: this.tabName,
       file: this.currentFile,
       source: this.selectedSource(),
       humanCloseness: Number(this.humanCloseness.value),
       heardText: sanitizeInput(this.userInput.value.trim()),
-      misheardText: this.misheardText.textContent,
+      misheardText: this.currentMisheardText,
       misinterpretationLikelihood: Number(this.misinterpretationLikelihood.value),
       originalAudioText: this.currentAudioText,
       originalAudioRealism: Number(this.originalAudioRealism.value)
-    });
+    };
+
+    const uploadGeneration = this.uploadGeneration;
+    this.submitButton.disabled = true;
+    try {
+      await this.uploadResult(result);
+      if (uploadGeneration !== this.uploadGeneration) return;
+      this.results.push(result);
+    } catch (error) {
+      this.status.textContent = `Could not save this audio: ${error.message}`;
+      this.updateFormState();
+      return;
+    }
+
     this.clearCurrentInputs();
+    this.saveProgress();
     this.nextSound();
   }
 
@@ -165,7 +213,9 @@ class SurveyTab {
     this.index = 0;
     this.currentFile = null;
     this.currentAudioText = "";
+    this.currentMisheardText = "";
     this.results.length = 0;
+    sessionStorage.removeItem(this.storageKey);
     this.status.hidden = false;
     this.player.hidden = false;
     this.surveyInputs.hidden = false;
@@ -176,20 +226,24 @@ class SurveyTab {
   }
 
   sendResults() {
-    const uploadGeneration = ++this.uploadGeneration;
+    this.uploadGeneration++;
     this.skipButton.disabled = true;
-    fetch("http://localhost:5000/survey_upload", {
+    this.status.hidden = true;
+    this.player.hidden = true;
+    this.surveyInputs.hidden = true;
+    this.finishedMessage.hidden = false;
+  }
+
+  uploadResult(result) {
+    return fetch("http://localhost:5000/survey_upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: this.results })
+      body: JSON.stringify({ userId, data: [result] })
     })
-      .then(response => response.json())
-      .then(() => {
-        if (uploadGeneration !== this.uploadGeneration) return;
-        this.status.hidden = true;
-        this.player.hidden = true;
-        this.surveyInputs.hidden = true;
-        this.finishedMessage.hidden = false;
+      .then(async response => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Survey result could not be saved");
+        return payload;
       });
   }
 }
@@ -229,8 +283,13 @@ initializeSurveys();
 const tabButtons = [...document.querySelectorAll('[role="tab"]')];
 const tabPanels = [...document.querySelectorAll('[role="tabpanel"]')];
 tabButtons.forEach(button => button.addEventListener("click", () => {
+  sessionStorage.setItem("activeSurveyTab", button.id);
   tabButtons.forEach(tab => tab.setAttribute("aria-selected", String(tab === button)));
   tabPanels.forEach(panel => {
     panel.hidden = panel.id !== button.getAttribute("aria-controls");
   });
 }));
+
+const savedTabId = sessionStorage.getItem("activeSurveyTab");
+const savedTab = tabButtons.find(button => button.id === savedTabId);
+if (savedTab) savedTab.click();

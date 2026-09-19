@@ -444,7 +444,7 @@ ncvoter_*.txt
 [Ii]nput*/
 [Aa]udio_Tests/
 **/audio_*/audios/
-survey_audio_noisy/
+survey_*/
 **/*einwilligung*
 *.pptx
 *.docx

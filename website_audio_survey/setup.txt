@@ -1,0 +1,30 @@
+To setup the Audio Survey Website as localhost, follow these steps:
+
+1. Install Visual Studio Code
+2. In VSCode, install the extension "Live Server". (The Extension menu can be found on the left edge of the screen)
+3. Open the website_audio_input folder with VSCode
+4. Install Node.js. If you use the windows installer at https://nodejs.org/en/download, you can leave all options in the installation wizard at their default.
+   The versions I successfully used were v26.7.0 and v24.20.0. The dependencies I used should not be that version-sensible.
+   If node -v and npm -v return versions, you can proceed. (You may need to restart VSCode for it to recognize the new commands)
+   (Use the command prompt, not powershell, which can be done down at the terminal with the arrow next to the +)
+5. Install the dependencies: npm install in the VSCode Terminal command prompt will install the dependencies listed in package.json
+6. In the VSCode terminal command prompt, node server.js will have the backend run at http://localhost:5000/.
+   Keep it running while submitting the audio!
+7. Rightclick on index_audio_input.html and click on "Open with Live Server". This should open the website in a browser.
+
+On the index page, you will be asked to enter some data before you can proceed to the Survey link.
+
+!!!A new user Id is given when new data is submitted on the index page, so please return to the Index page between each participant
+and have them enter and submit their data here!!!
+
+After submitting the answers (as many as the participants want, but please roughly the same amount for clean and dirty audio samples),
+please check if the following are in the folder:
+
+1. participant_data.jsonl containing the data given on the first page
+2. clean_audio_results.csv
+3. dirty_audio_results.csv
+
+These are appended on for all participants, so even after multiple participants, there will only be one of these files each.
+
+These are also the files that I then need back after all participants are done.
+Thanks for helping with the survey!

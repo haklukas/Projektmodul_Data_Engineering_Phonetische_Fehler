@@ -3,8 +3,8 @@ from pathlib import Path
 from audiolib import audioread, audiowrite
 from pydub import AudioSegment
 
-input_folder = Path("Input_Fabian/audio_upload")
-output_folder = Path("Input_Fabian/audio_upload_wav")
+input_folder = Path("Input_Lukas/audio_upload")
+output_folder = Path("Input_Lukas/audio_upload_wav")
 output_folder.mkdir(parents=True, exist_ok=True)
 
 for input_path in input_folder.glob("*.opus"):

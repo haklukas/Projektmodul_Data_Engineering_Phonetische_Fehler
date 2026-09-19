@@ -1,5 +1,16 @@
 import whisper
 import numpy as np
+from pathlib import Path
+
+
+def _load_whisper_model(model_name):
+    model_url = whisper._MODELS.get(model_name)
+    if model_url is not None:
+        model_path = Path.home() / ".cache" / "whisper" / Path(model_url).name
+        if model_path.is_file():
+            return whisper.load_model(str(model_path), device="cpu")
+
+    return whisper.load_model(model_name, device="cpu")
 
 def stt (audios, language=None,stt_name="Whisper_turbo"):
     if stt_name == "Whisper_turbo":
@@ -36,7 +47,7 @@ def stt_whisper(audios, language=None, model="turbo" ):
         list of transcribed strings corresponding to each audio input.
     """
 
-    model = whisper.load_model(model, device="cpu")
+    model = _load_whisper_model(model)
     texts = []
     if isinstance(audios, str) or isinstance(audios, np.ndarray):
         audios = [audios]

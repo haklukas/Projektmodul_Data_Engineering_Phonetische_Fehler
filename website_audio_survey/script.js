@@ -118,7 +118,7 @@ class SurveyTab {
       this.updateFormState();
     });
 
-    this.userInput.addEventListener("input", () => this.updateFormState());
+    this.userInput.addEventListener("change", () => this.updateFormState());
     this.submitButton.addEventListener("click", () => this.submitCurrent());
     this.skipButton.addEventListener("click", () => {
       this.clearCurrentInputs();

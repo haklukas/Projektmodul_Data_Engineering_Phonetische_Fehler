@@ -11,7 +11,7 @@
 
   <p>Hello and thank you for helping with this project! <br>
   Please listen to the audio clips and answer the shown questions.<br>
-  Plesee do not change your answers after being shown the (mis)heard text and the original audio text.<br>
+  Please do not change your answers after being shown the (mis)heard text and the original audio text.<br>
   There are two types of audio samples in this survey: "Dirty Audio" that has been intentionally distorted with volume and speed changes, noise and interruptions, and "Clean Audio" that has not.<br>
   Both may still be spoken in dialect or accents<br>
   You can answer as many questions as you want and have time, but please try to work on a similar amount of clean and dirty audio samples.<br>
@@ -40,11 +40,13 @@
       <label>What do you hear being said? Please take care to avoid typos!</label>
       <input data-role="userInput" type="text" placeholder="Your answer">
       <div data-role="misheardSection" hidden>
+        <p>From this point on, please do not edit your answers above!</p>
         <p>The audio is heard by a Speech To Text system as <strong data-role="misheardText">a sample phrase</strong>.</p>
         <label>How realistic is it for the audio to be (mis)interpreted like that?</label>
         <input data-role="misinterpretationLikelihood" type="range" min="1" max="10" step="1">
         <output data-role="misinterpretationLikelihoodValue">Select a rating</output>
         <div data-role="originalAudioSection" hidden>
+          <p>From this point on, please do not edit your answers above!</p>
           <p>The actual text of the audio is <strong data-role="originalAudioText">a sample original phrase</strong>.</p>
           <label>Given that this is the text being said, how close to it is the original audio?</label>
           <input data-role="originalAudioRealism" type="range" min="1" max="10" step="1">

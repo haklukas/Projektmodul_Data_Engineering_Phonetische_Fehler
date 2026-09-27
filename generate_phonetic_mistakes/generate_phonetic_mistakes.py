@@ -1,18 +1,17 @@
 
 from pathlib import Path
 import wave
-import soundfile as sf
 import numpy as np
 import random
 from audiolib import modify_audio, add_interruptions, audioread, audiowrite, match_samplerate
 from audio_embedding import compare_audio_embeddings
 from noisyspeech_synthesizer import *
-import Levenshtein
-import phonetics
-import cologne_phonetics
-import textdistance
-import spellwise
-import jellyfish
+#import Levenshtein
+#import phonetics
+#import cologne_phonetics
+#import textdistance
+#import spellwise
+#import jellyfish
 import re
 from num2words import num2words
 import string
@@ -97,220 +96,6 @@ def evaluate_phonetic_mistake(clean_audio, text, noisy_text, language, voice, tt
 
     return eval
 
-'''def evaluate_phonetic_mistakes(text, noisy_text, language):
-    """
-    """Description:
-        Evaluate phonetic and edit-distance differences between original and noisy transcriptions.
-
-    Args:
-        text: Original reference text.
-        noisy_text: Noisy or transcribed text to compare.
-        language: Language identifier (e.g., "german", "english").
-
-    Returns:
-        dict of metrics
-    """
-
-    translator = str.maketrans('', '', string.punctuation)
-    text = text.translate(translator)
-    if language == "english":
-        text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group())), text)
-    elif language == "german":
-        text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group()), lang= "de"), text)
-    
-    noisy_text = noisy_text.translate(translator)
-    if language == "english":
-        noisy_text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group())), noisy_text)
-    elif language == "german":
-        noisy_text = re.sub(r"[0-9]+", lambda m: num2words(int(m.group()), lang= "de"), noisy_text)
-
-    eval = dict()
-
-    print("--------------------------------------------------")
-    print("Evaluation:")
-    print(f"Original text: {text}")
-    print(f"Transcription for Noisy version: {noisy_text}")
-    print("------------------")
-
-    levenshtein_dist = Levenshtein.distance(text, noisy_text)
-    levenshtein_ratio = Levenshtein.ratio(text, noisy_text)
-    print(f"Levenshtein distance to original: {levenshtein_dist}, ratio: {levenshtein_ratio}")
-    levenshtein_req_edits = Levenshtein.editops(text, noisy_text)
-    print(f"Required Edits: {levenshtein_req_edits}")
-    print("------------------")
-    eval["levenshtein"] = levenshtein_dist
-
-    
-    jaro_winkler = Levenshtein.jaro_winkler(text, noisy_text)
-    jaro_winkler_dist = 1 - jaro_winkler
-    print(f"Jaro Winkler similiarity to original: {jaro_winkler}, distance: {jaro_winkler_dist}")
-    print("------------------")
-    eval["jaro_winkler"] = jaro_winkler_dist
-
-    damerau = textdistance.DamerauLevenshtein().distance(text, noisy_text)
-    print(f"Damerau-Levenshtein distance to original: {damerau}")
-    print("------------------")
-    eval["damerau"] = damerau
-
-    monge_elkan_orig_left = textdistance.MongeElkan().distance(text, noisy_text)
-    print(f"Monge-Elkan distance to original with original left: {monge_elkan_orig_left}")
-    print("------------------")
-    eval["monge_elkan_orig_left"] = monge_elkan_orig_left
-
-    monge_elkan_orig_right = textdistance.MongeElkan().distance(noisy_text, text)
-    print(f"Monge-Elkan distance to original with original right: {monge_elkan_orig_right}")
-    print("------------------")
-    eval["monge_elkan_orig_right"] = monge_elkan_orig_right
-
-    lcsstr = textdistance.LCSStr().distance(text, noisy_text)
-    print(f"Longest common substring distance with original: {lcsstr}")
-    print("------------------")
-    eval["lcsstr"] = lcsstr
-
-    caver1 = spellwise.CaverphoneOne()
-    caver1.add_words([text])
-    caver1_dist = caver1.get_suggestions(noisy_text, max_distance=500)[0]["distance"]
-    print(f"CaverphoneOne distance to original: {caver1_dist}")
-    print("------------------")
-    eval["caverphoneOne"] = caver1_dist
-
-    caver2 = spellwise.CaverphoneTwo()
-    caver2.add_words([text])
-    caver2_dist = caver2.get_suggestions(noisy_text, max_distance=500)[0]["distance"]
-    print(f"CaverphoneTwo distance to original: {caver2_dist}")
-    print("------------------")
-    eval["caverphoneTwo"] = caver2_dist
-
-    nysiis_text = jellyfish.nysiis(text)
-    print(f"Original text encoded by nysiis: {nysiis_text}")
-    nysiis_noisy_text = jellyfish.nysiis(noisy_text)
-    print(f"Noisy text encoded by nysiis: {nysiis_noisy_text}")
-    print("------------------")
-    eval["nysiis"] = (nysiis_text, nysiis_noisy_text)
-    
-    print("Cologne Phonetics:")
-    cph_text = cologne_phonetics.encode(text)
-    encoded_text = ""
-    for _, encoded_substr in cph_text:
-        encoded_text += encoded_substr 
-    print(f"Original text encoded by Cologne Phonetics: {encoded_text}")
-    cph_noisy_text = cologne_phonetics.encode(noisy_text)
-    encoded_noisy_text = ""
-    for _, encoded_substr in cph_noisy_text:
-        encoded_noisy_text += encoded_substr
-    eval["cologne_phonetics"] = (encoded_text, encoded_noisy_text)
-    print(f"Noisy text encoded by Cologne Phonetics: {encoded_noisy_text}")
-    print("------------------")
-    
-    print("Soundex:")
-    sanitized_text = re.sub('[^a-z]', '', str(text).lower())
-    sanitized_noisy = re.sub('[^a-z]', '', str(noisy_text).lower())
-    soundex_text = phonetics.soundex(sanitized_text) if sanitized_text else ''
-    print(f"Original text encoded by Soundex: {soundex_text}")
-    soundex_noisy_text = phonetics.soundex(sanitized_noisy) if sanitized_noisy else ''
-    eval["soundex"] = (soundex_text, soundex_noisy_text)
-    print(f"Noisy text encoded by Soundex: {soundex_noisy_text}")
-    print("------------------")
-
-    print("Metaphone:")
-    metaphone_text = phonetics.metaphone(str(text).lower())
-    print(f"Original text encoded by Metaphone: {metaphone_text}")
-    metaphone_noisy_text = phonetics.metaphone(str(noisy_text).lower())
-    eval["metaphone"] = (metaphone_text, metaphone_noisy_text)
-    print(f"Noisy text encoded by Metaphone: {metaphone_noisy_text}")
-    print("------------------")
-
-    print("Double Metaphone:")
-    dmetaphone_text = phonetics.dmetaphone(str(text).lower())
-    print(f"Original text encoded by Double Metaphone: {dmetaphone_text}")
-    dmetaphone_noisy_text = phonetics.dmetaphone(str(noisy_text).lower())
-    eval["dmetaphone"] = (dmetaphone_text, dmetaphone_noisy_text)
-    print(f"Noisy text encoded by Double Metaphone: {dmetaphone_noisy_text}")
-    print("--------------------------------------------------")
-    
-    return eval'''
-
-"""def normalize_metrics(metrics_list):
-    norm_metrics_list = []
-    min_metrics = dict()
-    max_metrics = dict()
-    for metrics in metrics_list:
-        norm_metrics = dict()
-        for metric_name, metric_value in metrics.items():
-            if metric_name == "dmetaphone":
-                lev_dists = []
-                lev_dists.append(Levenshtein.distance(metric_value[0][0], metric_value[1][0]))
-                if metric_value[1][1] != "":
-                    lev_dists.append(Levenshtein.distance(metric_value[0][0], metric_value[1][1]))
-                if metric_value[0][1] != "":
-                    lev_dists.append(Levenshtein.distance(metric_value[0][1], metric_value[1][0]))
-                    if metric_value[1][1] != "":
-                        lev_dists.append(Levenshtein.distance(metric_value[0][1], metric_value[1][1]))
-                norm_metrics[metric_name] = min(lev_dists)
-            elif isinstance(metric_value, tuple):
-                norm_metrics[metric_name] = Levenshtein.distance(metric_value[0], metric_value[1])
-            else:
-                norm_metrics[metric_name] = metric_value
-            if metric_name not in min_metrics or norm_metrics[metric_name] < min_metrics[metric_name]:
-                min_metrics[metric_name] = norm_metrics[metric_name]
-            if metric_name not in max_metrics or norm_metrics[metric_name] > max_metrics[metric_name]:
-                            max_metrics[metric_name] = norm_metrics[metric_name]
-        norm_metrics_list.append(norm_metrics)
-
-    print(f"Min metrics: {min_metrics}")
-    print(f"Max metrics: {max_metrics}")
-
-    for metrics in norm_metrics_list:
-        for metric_name in metrics.keys():
-            metrics[metric_name] = (metrics[metric_name] - min_metrics[metric_name]) / (max_metrics[metric_name] - min_metrics[metric_name])
-
-    print(norm_metrics_list)
-
-    return norm_metrics_list"""
-
-"""def pick_mistake(text, noisy_texts, language, severity):
-    metrics_list = []
-    noisy_texts = [noisy_text for noisy_text in noisy_texts if noisy_text != text]
-    for noisy_text in noisy_texts:
-        metrics = evaluate_phonetic_mistakes(text, noisy_text, language)
-        metrics_list.append(metrics)
-    metrics_list = normalize_metrics(metrics_list)
-    combo_metric_list = [(noisy_texts[i], sum(metrics_list[i].values()) / len(metrics_list[i].values())) for i in range(len(noisy_texts))]
-    print(f"CML: {combo_metric_list}")
-    combo_metric_list.sort(key= lambda combo_metric : combo_metric[1])
-    print(f"CML2: {combo_metric_list}")
-    split_list = np.array_split(np.array(combo_metric_list, dtype=np.dtype('U500, float')), 10)
-    print(f"Split list: {split_list}")
-    candidates = list(split_list[severity-1])
-    print(f"Candidates: {candidates}")
-    if candidates == []:
-        mistake = combo_metric_list[-1]
-    else:
-        mistake = random.choice(candidates)
-    print(mistake)
-    return mistake[0]"""
-
-"""def is_similar_sounding(text, noisy_text, language):
-
-    eval = evaluate_phonetic_mistakes(text, noisy_text, language)
-
-    is_similar_sounding = False
-    for algo, values in eval.items():
-        if algo == "dmetaphone":
-            if len([x for x in values[0] if x in values[1] and x != '']) > 0:
-                is_similar_sounding = True
-                print("####################################################")
-                print(f"{text} is similar to {noisy_text} by algorithm {algo} : {values[0]} and {values[1]} have overlap")
-                print("####################################################")
-        elif values[0] == values[1]:
-            is_similar_sounding = True
-            print("####################################################")
-            print(f"{text} is similar to {noisy_text} by algorithm {algo} : {values[0]} = {values[1]}")
-            print("####################################################")
-
-    return is_similar_sounding"""
-
-
 def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voices, tts_name="Piper", stt_name="Whisper_turbo", return_filenames=False):
     """Description:
         Synthesize audio, apply transformations and noise layers, run STT, and evaluate phonetic mistakes.
@@ -354,8 +139,9 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
                     modified_audio_metadata.append(audio_metadata[i])
                     modified_audio_sources.append((audio, orig_sr, audio_metadata[i]))
 
-    for i in range(len(modified_audios)):
-        audiowrite(modified_audios[i], orig_sr, os.path.join("clean", f"modified_audio_{i}.wav"))
+    # uncomment to test modified audios by writing them to disk
+    #for i in range(len(modified_audios)):
+    #    audiowrite(modified_audios[i], orig_sr, os.path.join("clean", f"modified_audio_{i}.wav"))
 
     print(f"Number of modified audio versions: {len(modified_audios)}")
     print(f"Number of modified audio metadata entries: {len(modified_audio_metadata)}")
@@ -436,33 +222,6 @@ def generate_phonetic_mistakes(text, textclass, text_language, stt_language, voi
                 )
             )
         )
-
-    """
-    evalspeech_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "EvalSpeech"))
-
-    if os.path.exists(evalspeech_dir):
-        shutil.rmtree(evalspeech_dir)
-    os.makedirs(evalspeech_dir)
-
-    for i in range(len(noisy_texts)):
-        noisy_text = noisy_texts[i]
-        metadata = noisy_speech_metadata[i]
-        print(f"Noisy text: {noisy_text}")
-        voice_pack_path, speaker_id = metadata
-        evalspeech_data, eval_sr = tts_single(text=noisy_text, voices=[(voice_pack_path, [speaker_id])], tts_name=tts_name)
-        eval_audio = evalspeech_data[0][0]
-        audiowrite(eval_audio, eval_sr, os.path.join(evalspeech_dir, f"eval_{i}.wav"))
-    """
-
-    """
-    mistake = pick_mistake(text, noisy_texts, text_language, severity)
-    similar_sounding_texts = []
-    for noisy_text 
-    in noisy_texts:
-        if is_similar_sounding(text=text, noisy_text=noisy_text, language=text_language):
-            similar_sounding_texts.append(noisy_text)
-
-    print(noisy_texts)"""
 
     evaluation_results = [result for result in evaluation_results if result[2] != -1]
     print(f"Number of valid evaluation results: {len(evaluation_results)}")

@@ -8,7 +8,6 @@ Created on Wed Jun 26 15:54:05 2019
 import soundfile as sf
 import os
 import numpy as np
-import librosa
 from audiotsm import wsola
 from audiotsm.io.array import ArrayReader, ArrayWriter
 from scipy.signal import resample_poly
@@ -62,7 +61,7 @@ def audioread(path, norm = True, start=0, stop=None):
         x = norm_audio(x)
     return x, sr    
     
-# Funtion to write audio    
+# Function to write audio    
 def audiowrite(data, fs, destpath, norm=False):
     """
     Write audio data to disk, optionally normalizing first.

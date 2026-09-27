@@ -5,7 +5,7 @@ from pathlib import Path
 
 import soundfile as sf
 
-from generate_phonetic_mistakes import get_phonetic_mistake_single
+from generate_phonetic_mistakes import get_phonetic_mistake_single, evaluate_phonetic_mistakes
 from stt import stt
 from textclass_params import CLEAN_TEXTCLASS, Textclasses
 
@@ -327,7 +327,6 @@ def create_stt_csv_from_wav_folder(
 
 	return csv_path
 
-
 def trim_wav_files_in_folder(
 	audio_folder,
 	output_folder,
@@ -377,11 +376,12 @@ if __name__ == "__main__":
 	text_language = "english"
 	stt_language = "english"
 
-	wav_folder1 = Path("website_audio_survey/audio_clean/audios")
-	wav_folder2 = Path("website_audio_survey/audio_dirty/audios")
+	
+	#wav_folder1 = Path("website_audio_survey/audio_clean/audios")
+	#wav_folder2 = Path("website_audio_survey/audio_dirty/audios")
 
-	create_stt_csv_from_wav_folder(wav_folder1, stt_language=stt_language)
-	create_stt_csv_from_wav_folder(wav_folder2, stt_language=stt_language)
+	#create_stt_csv_from_wav_folder(wav_folder1, stt_language=stt_language)
+	#create_stt_csv_from_wav_folder(wav_folder2, stt_language=stt_language)
 
 	#wav_folder_begin = Path("website_audio_survey/audio_dirty/audios_to_trim_begin")
 	#wav_folder_end = Path("website_audio_survey/audio_dirty/audios_to_trim_end")
